@@ -72,7 +72,8 @@ gospec/
 │
 ├── scripts/
 │   ├── install.sh         # User install script (one-liner: install skill + create AGENTS.md)
-│   ├── build-skill.sh     # Maintainer script: build the .skill artifact
+│   ├── build-skill.py     # Maintainer script: build the .skill artifact (cross-platform, used by CI)
+│   ├── build-skill.sh     # Maintainer script: bash equivalent of build-skill.py
 │   └── validate-skill.py  # Self-contained frontmatter + required-file validator
 │
 ├── .github/
@@ -227,7 +228,12 @@ Or build it yourself:
 
 ```bash
 git clone https://github.com/singchia/gospec && cd gospec
-scripts/build-skill.sh                 # outputs ./dist/gospec.skill
+
+# Cross-platform (recommended — Windows / macOS / Linux, only python3 + pyyaml required)
+python3 scripts/build-skill.py         # outputs ./dist/gospec.skill
+
+# Or bash version (macOS / Linux only, needs bash + zip)
+scripts/build-skill.sh
 ```
 
 ### Reading as a human

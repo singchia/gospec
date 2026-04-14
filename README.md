@@ -70,7 +70,8 @@ gospec/
 │
 ├── scripts/
 │   ├── install.sh         # 用户安装脚本（一行命令安装 + 创建 AGENTS.md）
-│   ├── build-skill.sh     # 维护者用：构建 .skill 打包产物
+│   ├── build-skill.py     # 维护者用：构建 .skill 打包产物（跨平台，CI 使用）
+│   ├── build-skill.sh     # 维护者用：build-skill.py 的 bash 等价版本
 │   └── validate-skill.py  # 自包含 frontmatter + 必备文件校验
 │
 ├── .github/
@@ -224,7 +225,12 @@ cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
 
 ```bash
 git clone https://github.com/singchia/gospec && cd gospec
-scripts/build-skill.sh                 # 输出到 ./dist/gospec.skill
+
+# 跨平台（推荐，Windows / macOS / Linux 通用，仅需 python3 + pyyaml）
+python3 scripts/build-skill.py         # 输出到 ./dist/gospec.skill
+
+# 或 bash 版本（macOS / Linux，需 bash + zip）
+scripts/build-skill.sh
 ```
 
 ### 手动使用（人类阅读）

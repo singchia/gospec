@@ -24,12 +24,12 @@ jobs:
         run: pip install pyyaml
 
       - name: Build gospec.skill
-        run: scripts/build-skill.sh dist
+        run: python3 scripts/build-skill.py dist
 
       - name: Verify artifact
         run: |
           ls -lh dist/gospec.skill
-          unzip -l dist/gospec.skill | tail -10
+          python3 -c "import zipfile; z=zipfile.ZipFile('dist/gospec.skill'); print(f'files: {len(z.namelist())}')"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

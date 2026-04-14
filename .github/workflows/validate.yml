@@ -22,6 +22,5 @@ jobs:
 
       - name: Smoke test build
         run: |
-          scripts/build-skill.sh /tmp/dist
+          python3 scripts/build-skill.py /tmp/dist
           test -f /tmp/dist/gospec.skill
-          unzip -l /tmp/dist/gospec.skill | tail -5
