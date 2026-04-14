@@ -145,9 +145,24 @@ Functional Options / Constructor Injection / Strategy / Decorator / Adapter / Wo
 
 ## 如何使用
 
-### 一行命令安装（推荐）
+gospec 兼容 [skills.sh](https://skills.sh) 的 Open Agent Skills 协议，任何 [skills.sh 支持的 agent](https://skills.sh)（45+ 种，包括 Claude Code / Cursor / Cline / Codex / Gemini CLI / GitHub Copilot 等）都可以通过 `npx skills add` 安装。
+
+### 方式一：`npx skills add`（标准入口，最简单）
 
 在你的 Go 项目根目录运行：
+
+```bash
+cd your-go-project
+npx skills add singchia/gospec        # 项目级安装到 .claude/skills/gospec/
+# 或全局安装：
+npx skills add singchia/gospec -g     # 安装到 ~/.claude/skills/gospec/
+```
+
+之后 Claude Code 等支持 SKILL.md 的 agent 会在你写 / 审查 / 重构 Go 代码时自动激活 gospec，并在首次激活时主动询问是否在项目根创建 `AGENTS.md`。
+
+### 方式二：`install.sh`（一行命令，自动落 AGENTS.md）
+
+如果你想立刻把 `AGENTS.md` 落到项目根（不等 agent 提示），或者你的 agent 不读 SKILL.md 必须靠 AGENTS.md 触发：
 
 ```bash
 cd your-go-project
@@ -161,20 +176,19 @@ bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/
 
 之后任何 agent（Claude Code、Cursor、Cline、Codex、Gemini CLI、GitHub Copilot）打开你的项目，第一眼看到 `AGENTS.md` 就被引导到 gospec 的任务路由表 + 核心约束。
 
-> **为什么需要 AGENTS.md 在项目根**：Claude Code 通过 SKILL.md 自动激活 skill，但其他 agent 没有这个机制。`AGENTS.md` 是 [agentsmd.org](https://agentsmd.net) 的开放约定，几乎所有现代 coding agent 都会读它。把它放在项目根，就是告诉所有 agent："本项目用 gospec"。
+> **AGENTS.md vs SKILL.md 的区别**：
+> - `SKILL.md` 是 Claude Code 通过 [skills.sh](https://skills.sh) 协议自动加载的入口，作用域是整个 skill
+> - `AGENTS.md` 是 [agentsmd.net](https://agentsmd.net) 开放约定，放在项目根，告诉**所有** agent"本项目用了 gospec"
+> - 两者互补：SKILL.md 解决"agent 怎么加载 skill 内容"，AGENTS.md 解决"agent 怎么知道当前项目用了哪些 skill"
 
-### 项目级安装（仅当前项目可见）
-
-如果你只想让 gospec 对单个项目生效，不影响其他项目：
+### 方式三：项目级 install.sh（不影响其他项目）
 
 ```bash
 cd your-go-project
 SKILL_DIR=.claude/skills/gospec bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/install.sh)
 ```
 
-### 手动安装
-
-如果不想跑脚本，三步：
+### 方式四：手动安装
 
 ```bash
 # 1. clone skill
@@ -188,14 +202,13 @@ cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
 git add AGENTS.md && git commit -m "chore: add gospec AGENTS.md"
 ```
 
-### 离线 / 内网分发（.skill 包）
+### 方式五：离线 / 内网分发（.skill 包）
 
 GitHub Releases 提供打包好的 `gospec.skill`（zip 格式，约 130KB / 68 文件）：
 
 ```bash
 curl -L -o gospec.skill https://github.com/singchia/gospec/releases/latest/download/gospec.skill
 unzip gospec.skill -d ~/.claude/skills/
-# 然后到你的项目根：
 cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
 ```
 
@@ -205,12 +218,6 @@ cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
 git clone https://github.com/singchia/gospec && cd gospec
 scripts/build-skill.sh                 # 输出到 ./dist/gospec.skill
 ```
-
-### Cursor / Cline / Windsurf
-
-跑上面的一行命令安装即可。安装会创建 `AGENTS.md` 在项目根，Cursor / Cline / Windsurf 会自动读取它。
-
-如果你的 agent 不读 `AGENTS.md`，请在它的 rules / instructions 路径里手动指引："先读 `~/.claude/skills/gospec/spec/spec.md` 的任务路由表"。
 
 ### 手动使用（人类阅读）
 

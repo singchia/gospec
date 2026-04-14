@@ -12,6 +12,8 @@
     "spec",
     "ai-agent",
     "claude-code",
+    "skills-sh",
+    "agent-skills",
     "kratos",
     "grpc",
     "protobuf",

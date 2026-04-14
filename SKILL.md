@@ -14,6 +14,15 @@ license: MIT
 2. **第二步**：只读路由表指定的 1-3 个文件，不要顺序读全部
 3. **第三步**：实施 + 对照文件末尾的"自查清单"
 
+## 首次在新项目中激活时
+
+如果检测到当前是首次在某个项目中使用本 skill，**主动检查项目根目录是否有 `AGENTS.md`**：
+
+- **有** → 直接按上面的工作流推进
+- **没有** → 提示用户："要不要从 `docs/templates/project-agents-template.md` 创建一份项目根 `AGENTS.md`？这样 Cursor / Cline / Codex / Gemini CLI / Copilot 等其他 agent 打开本项目时也能识别 gospec 规范。" 用户同意后用 Read + Write 把模板复制到项目根。
+
+这样无论用户是通过 `npx skills add singchia/gospec`（标准安装，不会自动放 AGENTS.md）还是 `bash <(curl .../install.sh)`（会自动放），最终都能让所有 agent 看到本项目用了 gospec。
+
 ## 技术栈
 
 | 领域 | 选型 |

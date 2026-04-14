@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **文档模板**（`docs/templates/`）：PRD / RFC / ADR / HLD / PR 五个模板，与 spec 规则双向引用。
 - **Skill 安装机制**：
   - `SKILL.md` 通过 skill-creator 校验，作为 Claude Code skill 加载入口
-  - `scripts/install.sh` 一行命令安装 + 在用户项目根创建 `AGENTS.md`
+  - 兼容 [skills.sh](https://skills.sh) Open Agent Skills 协议，支持 `npx skills add singchia/gospec` 标准入口
+  - SKILL.md 含"首次激活检查 AGENTS.md"指引：通过 `npx skills add` 安装的用户首次使用时，agent 会主动询问是否在项目根创建 AGENTS.md
+  - `scripts/install.sh` 一行命令安装 + 在用户项目根创建 `AGENTS.md`（与 npx skills 互补，提供更主动的 AGENTS.md 落地）
   - `docs/templates/project-agents-template.md` 项目根 AGENTS.md 模板，inline 核心约束
   - `scripts/build-skill.sh` 维护者用，构建 `.skill` 打包产物（约 130KB / 68 文件）
