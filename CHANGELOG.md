@@ -25,9 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **数据库迁移规范**（`spec/13-database-migration/`）：migration 工具、在线 DDL、backfill、数据治理。
 - **文档模板**（`docs/templates/`）：PRD / RFC / ADR / HLD / PR 五个模板，与 spec 规则双向引用。
 - **Skill 安装机制**：
-  - `SKILL.md` 通过 skill-creator 校验，作为 Claude Code skill 加载入口
-  - 兼容 [skills.sh](https://skills.sh) Open Agent Skills 协议，支持 `npx skills add singchia/gospec` 标准入口
+  - `SKILL.md` 含 frontmatter `name` + `description` + `license`，符合 [skills.sh](https://skills.sh) Open Agent Skills 协议
+  - 支持 `npx skills add singchia/gospec` 标准入口
   - SKILL.md 含"首次激活检查 AGENTS.md"指引：通过 `npx skills add` 安装的用户首次使用时，agent 会主动询问是否在项目根创建 AGENTS.md
   - `scripts/install.sh` 一行命令安装 + 在用户项目根创建 `AGENTS.md`（与 npx skills 互补，提供更主动的 AGENTS.md 落地）
   - `docs/templates/project-agents-template.md` 项目根 AGENTS.md 模板，inline 核心约束
-  - `scripts/build-skill.sh` 维护者用，构建 `.skill` 打包产物（约 130KB / 68 文件）
+  - `scripts/build-skill.sh` 自包含构建脚本（依赖 bash + python3 + pyyaml + zip），产出 `dist/gospec.skill`（~140KB / 84 entries）
+  - `scripts/validate-skill.py` 自包含 frontmatter + 必备文件校验器，与 skill-creator/quick_validate.py 规则对齐
+- **CI/CD**：
+  - `.github/workflows/validate.yml` 每次 push / PR 校验 SKILL.md frontmatter + smoke test 构建
+  - `.github/workflows/release.yml` tag push 自动构建 `gospec.skill` 并创建 GitHub Release，附带 .skill 资产 + 自动生成的 release notes

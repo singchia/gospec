@@ -68,7 +68,13 @@ gospec/
 │
 ├── scripts/
 │   ├── install.sh         # 用户安装脚本（一行命令安装 + 创建 AGENTS.md）
-│   └── build-skill.sh     # 维护者用：构建 .skill 打包产物
+│   ├── build-skill.sh     # 维护者用：构建 .skill 打包产物
+│   └── validate-skill.py  # 自包含 frontmatter + 必备文件校验
+│
+├── .github/
+│   └── workflows/
+│       ├── validate.yml   # push / PR 触发：校验 + smoke test
+│       └── release.yml    # tag push 触发：构建并发布 .skill 到 GitHub Release
 │
 ├── SKILL.md               # Skill 元信息（Claude Code 加载入口）
 ├── AGENTS.md              # Agent 行为约束入口

@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # softprops/action-gh-release 需要完整历史生成 release notes
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      - name: Build gospec.skill
+        run: scripts/build-skill.sh dist
+
+      - name: Verify artifact
+        run: |
+          ls -lh dist/gospec.skill
+          unzip -l dist/gospec.skill | tail -10
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/gospec.skill
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            ## 安装
+
+            ### 通过 npx skills（推荐）
+
+            ```bash
+            cd your-go-project
+            npx skills add singchia/gospec
+            ```
+
+            ### 通过一行命令（带 AGENTS.md 自动落地）
+
+            ```bash
+            cd your-go-project
+            bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/install.sh)
+            ```
+
+            ### 离线 / 内网（下载本 release 的 .skill 包）
+
+            ```bash
+            curl -L -o gospec.skill https://github.com/singchia/gospec/releases/download/${{ github.ref_name }}/gospec.skill
+            unzip gospec.skill -d ~/.claude/skills/
+            ```
+
+            完整 changelog 见下方"What's Changed"自动生成的内容。
