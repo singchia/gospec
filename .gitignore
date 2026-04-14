@@ -12,7 +12,7 @@
 .env
 .env.local
 
-# Go binaries and caches（本仓库不含 Go 代码，但预留）
-bin/
+# 构建产物
 dist/
+bin/
 .cache/

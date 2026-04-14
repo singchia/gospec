@@ -1,9 +1,10 @@
 ---
-name: go-best-practices
-description: "Go 后端项目开发全流程中文规范（基于 go-kratos / GORM / Casdoor / Protobuf）。当用户创建 Go 项目、编写/审查/重构 Go 代码、设计 gRPC/HTTP API、写测试、配置 CI/CD、设计监控告警、处理安全/密钥/合规、写部署或运维方案、写数据库 migration、撰写需求/架构/事故文档时使用。适用于云原生后端、IoT 管理平台、微服务。"
+name: gospec
+description: "Go 后端项目 SDLC 全流程中文规范（基于 go-kratos / GORM / Protobuf / OpenTelemetry / Prometheus）。覆盖需求 / 架构 / API / 数据模型（MySQL Redis ClickHouse InfluxDB） / 编码 / 测试 / 代码审查 / 交付 / 文档 / 可观测性 / 安全 / 运维 / 数据库迁移 13 个阶段。当用户创建 Go 项目、写或审查 Go 代码、设计 gRPC/HTTP API、设计数据模型、写测试、配置 CI/CD、设计监控告警 SLO、处理安全 密钥 合规、写部署或事故响应方案、写数据库 migration、撰写 PRD RFC ADR HLD 文档时使用。适用于云原生后端、IoT 平台、微服务、单仓 monorepo 项目。"
+license: MIT
 ---
 
-# go-best-practices
+# gospec
 
 ## 如何使用本 Skill
 

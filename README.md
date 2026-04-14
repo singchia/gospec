@@ -58,15 +58,20 @@ gospec/
 │   └── 13-database-migration/  # migration / 在线 DDL / 数据治理
 │
 ├── docs/
-│   └── templates/         # 可复制的文档模板
+│   └── templates/         # 可复制的文档模板（单一真相源）
 │       ├── product-requirement-template.md       (PRD)
 │       ├── technical-rfc-template.md             (RFC)
 │       ├── architecture-decision-record-template.md  (ADR)
 │       ├── high-level-design-template.md         (HLD)
 │       └── pull-request-template.md
 │
-├── SKILL.md               # Skill 元信息（给 Agent 发现用）
+├── scripts/
+│   └── build-skill.sh     # 构建 .skill 打包产物
+│
+├── SKILL.md               # Skill 元信息（Claude Code 加载入口）
 ├── AGENTS.md              # Agent 行为约束入口
+├── CHANGELOG.md           # 版本历史
+├── LICENSE                # MIT
 └── README.md              # 本文件
 ```
 
@@ -138,19 +143,63 @@ Functional Options / Constructor Injection / Strategy / Decorator / Adapter / Wo
 
 ## 如何使用
 
-### Claude Code
+### Claude Code（推荐：clone 即用）
 
-把这个仓库 clone 到本地，在你的 Go 项目里引用它，或者直接把 `SKILL.md` 和 `spec/` 放到你项目的 `.claude/skills/` 目录。
+**个人 skill**（所有项目可用）：
 
-Agent 会在看到 Go 项目时自动激活此 Skill，并按 `spec/spec.md` 的路由表按需加载规范。
+```bash
+git clone https://github.com/singchia/gospec ~/.claude/skills/gospec
+```
+
+**项目 skill**（只对当前 Go 项目生效）：
+
+```bash
+cd your-go-project
+mkdir -p .claude/skills
+git clone https://github.com/singchia/gospec .claude/skills/gospec
+```
+
+安装后新开 Claude Code 会话，Agent 会在你写 / 审查 / 重构 Go 代码、设计 API、写测试、配 CI/CD 等场景下自动激活此 skill，并按 `spec/spec.md` 的路由表按需加载规范。
+
+### Claude Code（.skill 包，离线 / 内网分发）
+
+GitHub Releases 提供打包好的 `gospec.skill`（zip 格式，~130KB）。
+
+```bash
+curl -L -o gospec.skill https://github.com/singchia/gospec/releases/latest/download/gospec.skill
+unzip gospec.skill -d ~/.claude/skills/
+```
+
+或者自己构建：
+
+```bash
+git clone https://github.com/singchia/gospec
+cd gospec
+scripts/build-skill.sh                 # 输出到 ./dist/gospec.skill
+```
 
 ### Cursor / Cline / Windsurf
 
-复制 `spec/` 目录内容到对应的 rules / instructions 路径。建议把 `spec/spec.md` 设为必读入口。
+复制 `spec/` 目录内容到对应的 rules / instructions 路径。建议把 `spec/spec.md` 设为必读入口。这些 IDE 暂无原生 skill 自动加载机制，需要在 system prompt / rules 里手动指引 Agent"先读 spec/spec.md 的任务路由表"。
 
-### 手动使用
+### 手动使用（人类阅读）
 
 即使没有 Agent，这份规范也可以作为团队的 SDLC 手册直接读——每个子目录都有 `README.md` 作为二级路由，每个子文件都有"适用场景"和"自查清单"。
+
+### 验证安装
+
+安装成功后，让 Claude 跑一句：
+
+> 我有一个新需求：把项目从 klog 迁到 log/slog。请按 gospec 的流程推进。
+
+Agent 应该：
+1. 自动激活 gospec skill
+2. 读 `spec/spec.md` 的任务路由表
+3. 判断这是技术变更，应该走 RFC（不是 PRD / issue）
+4. 读 `spec/01-requirement/technical-rfc.md` 和 `docs/templates/technical-rfc-template.md`
+5. 提议为你创建 `docs/rfc/RFC-001-migrate-to-slog.md`
+
+如果 Agent 没按这个流程走，说明 skill 没有正确加载——检查 `~/.claude/skills/gospec/SKILL.md` 是否存在。
 
 ---
 
