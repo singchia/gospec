@@ -1,5 +1,7 @@
 # gospec — Go 项目 SDLC 全流程规范 Skill
 
+**中文** | [English](README.en.md)
+
 > **给 AI Agent 用的、覆盖 SDLC 左移到右移的 Go 项目规范集。**
 
 ---

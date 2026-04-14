@@ -1,6 +1,6 @@
 ---
 name: gospec
-description: "Go 后端项目 SDLC 全流程中文规范（基于 go-kratos / GORM / Protobuf / OpenTelemetry / Prometheus）。覆盖需求 / 架构 / API / 数据模型（MySQL Redis ClickHouse InfluxDB） / 编码 / 测试 / 代码审查 / 交付 / 文档 / 可观测性 / 安全 / 运维 / 数据库迁移 13 个阶段。当用户创建 Go 项目、写或审查 Go 代码、设计 gRPC/HTTP API、设计数据模型、写测试、配置 CI/CD、设计监控告警 SLO、处理安全 密钥 合规、写部署或事故响应方案、写数据库 migration、撰写 PRD RFC ADR HLD 文档时使用。适用于云原生后端、IoT 平台、微服务、单仓 monorepo 项目。"
+description: "Go backend SDLC spec skill (Chinese content). Covers 13 stages: requirements (Issue/RFC/PRD/Epic), architecture (layering + monorepo), API (proto/gRPC/HTTP), data models (MySQL/Redis/ClickHouse/InfluxDB), coding (10 design patterns), testing, code review, CI/CD, docs, observability (SLO/metrics/traces), security (authN/Z/threat-modeling/supply-chain), operations (incidents/runbooks/postmortems), and database migration. Use when writing or reviewing Go code, designing APIs or data schemas, writing tests, configuring CI/CD, setting up SLO and monitoring, handling security/secrets/compliance, writing deployment or incident plans, writing DB migrations, or drafting PRD/RFC/ADR/HLD docs. Go 后端项目 SDLC 全流程中文规范。覆盖需求/架构/API/数据模型（MySQL Redis ClickHouse InfluxDB）/编码/测试/代码审查/交付/文档/可观测性/安全/运维/数据库迁移 13 阶段。当编写或审查 Go 代码、设计 API 或数据模型、写测试、配 CI/CD、处理监控告警 SLO、安全 密钥 合规、写部署或事故响应方案、写数据库 migration、撰写 PRD RFC ADR HLD 文档时使用。"
 license: MIT
 ---
 
