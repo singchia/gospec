@@ -63,10 +63,12 @@ gospec/
 │       ├── technical-rfc-template.md             (RFC)
 │       ├── architecture-decision-record-template.md  (ADR)
 │       ├── high-level-design-template.md         (HLD)
-│       └── pull-request-template.md
+│       ├── pull-request-template.md              (PR)
+│       └── project-agents-template.md            (用户项目根 AGENTS.md)
 │
 ├── scripts/
-│   └── build-skill.sh     # 构建 .skill 打包产物
+│   ├── install.sh         # 用户安装脚本（一行命令安装 + 创建 AGENTS.md）
+│   └── build-skill.sh     # 维护者用：构建 .skill 打包产物
 │
 ├── SKILL.md               # Skill 元信息（Claude Code 加载入口）
 ├── AGENTS.md              # Agent 行为约束入口
@@ -143,44 +145,72 @@ Functional Options / Constructor Injection / Strategy / Decorator / Adapter / Wo
 
 ## 如何使用
 
-### Claude Code（推荐：clone 即用）
+### 一行命令安装（推荐）
 
-**个人 skill**（所有项目可用）：
-
-```bash
-git clone https://github.com/singchia/gospec ~/.claude/skills/gospec
-```
-
-**项目 skill**（只对当前 Go 项目生效）：
+在你的 Go 项目根目录运行：
 
 ```bash
 cd your-go-project
-mkdir -p .claude/skills
-git clone https://github.com/singchia/gospec .claude/skills/gospec
+bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/install.sh)
 ```
 
-安装后新开 Claude Code 会话，Agent 会在你写 / 审查 / 重构 Go 代码、设计 API、写测试、配 CI/CD 等场景下自动激活此 skill，并按 `spec/spec.md` 的路由表按需加载规范。
+这一行会做两件事：
 
-### Claude Code（.skill 包，离线 / 内网分发）
+1. **安装 gospec skill** 到 `~/.claude/skills/gospec/`（如果还没装）
+2. **在当前目录创建 `AGENTS.md`**，让任何 AI agent 打开本项目就知道遵循 gospec
 
-GitHub Releases 提供打包好的 `gospec.skill`（zip 格式，~130KB）。
+之后任何 agent（Claude Code、Cursor、Cline、Codex、Gemini CLI、GitHub Copilot）打开你的项目，第一眼看到 `AGENTS.md` 就被引导到 gospec 的任务路由表 + 核心约束。
+
+> **为什么需要 AGENTS.md 在项目根**：Claude Code 通过 SKILL.md 自动激活 skill，但其他 agent 没有这个机制。`AGENTS.md` 是 [agentsmd.org](https://agentsmd.net) 的开放约定，几乎所有现代 coding agent 都会读它。把它放在项目根，就是告诉所有 agent："本项目用 gospec"。
+
+### 项目级安装（仅当前项目可见）
+
+如果你只想让 gospec 对单个项目生效，不影响其他项目：
+
+```bash
+cd your-go-project
+SKILL_DIR=.claude/skills/gospec bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/install.sh)
+```
+
+### 手动安装
+
+如果不想跑脚本，三步：
+
+```bash
+# 1. clone skill
+git clone https://github.com/singchia/gospec ~/.claude/skills/gospec
+
+# 2. 在你的项目根复制 AGENTS.md
+cd your-go-project
+cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
+
+# 3. 提交
+git add AGENTS.md && git commit -m "chore: add gospec AGENTS.md"
+```
+
+### 离线 / 内网分发（.skill 包）
+
+GitHub Releases 提供打包好的 `gospec.skill`（zip 格式，约 130KB / 68 文件）：
 
 ```bash
 curl -L -o gospec.skill https://github.com/singchia/gospec/releases/latest/download/gospec.skill
 unzip gospec.skill -d ~/.claude/skills/
+# 然后到你的项目根：
+cp ~/.claude/skills/gospec/docs/templates/project-agents-template.md ./AGENTS.md
 ```
 
 或者自己构建：
 
 ```bash
-git clone https://github.com/singchia/gospec
-cd gospec
+git clone https://github.com/singchia/gospec && cd gospec
 scripts/build-skill.sh                 # 输出到 ./dist/gospec.skill
 ```
 
 ### Cursor / Cline / Windsurf
 
-复制 `spec/` 目录内容到对应的 rules / instructions 路径。建议把 `spec/spec.md` 设为必读入口。这些 IDE 暂无原生 skill 自动加载机制，需要在 system prompt / rules 里手动指引 Agent"先读 spec/spec.md 的任务路由表"。
+跑上面的一行命令安装即可。安装会创建 `AGENTS.md` 在项目根，Cursor / Cline / Windsurf 会自动读取它。
+
+如果你的 agent 不读 `AGENTS.md`，请在它的 rules / instructions 路径里手动指引："先读 `~/.claude/skills/gospec/spec/spec.md` 的任务路由表"。
 
 ### 手动使用（人类阅读）
 
@@ -188,18 +218,20 @@ scripts/build-skill.sh                 # 输出到 ./dist/gospec.skill
 
 ### 验证安装
 
-安装成功后，让 Claude 跑一句：
+安装成功后，让 Claude 或其他 agent 跑一句：
 
 > 我有一个新需求：把项目从 klog 迁到 log/slog。请按 gospec 的流程推进。
 
 Agent 应该：
-1. 自动激活 gospec skill
+1. 自动读到 `AGENTS.md` 或激活 gospec skill
 2. 读 `spec/spec.md` 的任务路由表
 3. 判断这是技术变更，应该走 RFC（不是 PRD / issue）
 4. 读 `spec/01-requirement/technical-rfc.md` 和 `docs/templates/technical-rfc-template.md`
 5. 提议为你创建 `docs/rfc/RFC-001-migrate-to-slog.md`
 
-如果 Agent 没按这个流程走，说明 skill 没有正确加载——检查 `~/.claude/skills/gospec/SKILL.md` 是否存在。
+如果 agent 没按这个流程走，检查：
+- `AGENTS.md` 是否存在于项目根
+- `~/.claude/skills/gospec/SKILL.md` 是否存在
 
 ---
 

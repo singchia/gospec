@@ -23,12 +23,15 @@ trap cleanup EXIT
 
 echo "📦 Staging skill files..."
 
-mkdir -p "$STAGING_DIR"
+mkdir -p "$STAGING_DIR" "$STAGING_DIR/scripts"
 cp "$REPO_ROOT/SKILL.md"   "$STAGING_DIR/"
 cp "$REPO_ROOT/AGENTS.md"  "$STAGING_DIR/"
 cp "$REPO_ROOT/LICENSE"    "$STAGING_DIR/"
 cp -r "$REPO_ROOT/spec"    "$STAGING_DIR/"
 cp -r "$REPO_ROOT/docs"    "$STAGING_DIR/"
+# 仅打包 install.sh（用户需要），不打包 build-skill.sh（仅维护者用）
+cp "$REPO_ROOT/scripts/install.sh" "$STAGING_DIR/scripts/"
+chmod +x "$STAGING_DIR/scripts/install.sh"
 
 mkdir -p "$OUT_DIR"
 
