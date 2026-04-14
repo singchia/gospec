@@ -1,0 +1,42 @@
+{
+  "name": "gospec",
+  "version": "0.1.0",
+  "description": "Go 后端项目 SDLC 全流程规范 Skill（中文）。覆盖需求、架构、API、数据模型（MySQL/Redis/ClickHouse/InfluxDB）、编码、测试、代码审查、交付、文档、可观测性、安全、运维与事故响应、数据库迁移 13 个阶段。按渐进式披露设计，Agent 按任务路由表按需加载规范子文件。",
+  "author": "singchia",
+  "license": "MIT",
+  "repository": "https://github.com/singchia/gospec",
+  "tags": [
+    "go",
+    "golang",
+    "sdlc",
+    "spec",
+    "ai-agent",
+    "claude-code",
+    "kratos",
+    "grpc",
+    "protobuf",
+    "gorm",
+    "mysql",
+    "redis",
+    "clickhouse",
+    "influxdb",
+    "opentelemetry",
+    "prometheus",
+    "slog",
+    "security",
+    "observability",
+    "operations",
+    "monorepo",
+    "chinese"
+  ],
+  "language": "zh-CN",
+  "agents": [
+    "claude-code",
+    "cursor",
+    "cline",
+    "windsurf",
+    "codex",
+    "gemini-cli",
+    "github-copilot"
+  ]
+}
