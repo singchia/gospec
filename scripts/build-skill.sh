@@ -11,7 +11,10 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="${1:-$REPO_ROOT/dist}"
+OUT_DIR_RAW="${1:-$REPO_ROOT/dist}"
+# 把 OUT_DIR 解析为绝对路径，避免脚本内 cd 后相对路径失效
+mkdir -p "$OUT_DIR_RAW"
+OUT_DIR="$(cd "$OUT_DIR_RAW" && pwd)"
 STAGING_PARENT="$(mktemp -d)"
 STAGING_DIR="$STAGING_PARENT/gospec"
 
@@ -35,7 +38,6 @@ chmod +x "$STAGING_DIR/scripts/install.sh"
 echo ""
 
 echo "🗜  Packaging..."
-mkdir -p "$OUT_DIR"
 (cd "$STAGING_PARENT" && zip -r -q "$OUT_DIR/gospec.skill" gospec/)
 
 echo ""
