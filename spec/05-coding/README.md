@@ -12,27 +12,31 @@
 | 设计构造函数、组合 / 装饰 / 适配 / 重试 / 并发模式 | `patterns.md` |
 | import 顺序、写注释、设计 struct 字段、结构体生命周期 | `style.md` |
 
-## 技术栈
+## 推荐技术栈（示例 / 非强制）
 
-| 领域 | 选型 |
-|------|------|
-| 语言 | Go 1.21+ |
-| Web 框架 | go-kratos/kratos v2 |
-| HTTP 路由 | gorilla/mux |
-| ORM | gorm.io/gorm + gorm.io/driver/mysql |
-| API 协议 | Protocol Buffers v3 + gRPC + HTTP/REST |
-| 认证 | Casdoor + JWT (golang-jwt/jwt v5) |
-| 配置 | gopkg.in/yaml.v2 |
-| 日志 | `log/slog`（推荐，Go 1.21+）/ `zap`；存量项目兼容 `klog` |
-| 指标 | prometheus/client_golang（详见 `10-observability/metrics.md`） |
-| 追踪 | OpenTelemetry（详见 `10-observability/tracing.md`） |
-| 测试 | testing + stretchr/testify |
-| API 文档 | swaggo/swag |
-| 进程管理 | armorigo/sigaction |
-| 日志轮转 | gopkg.in/natefinch/lumberjack.v2 |
-| 构建 | Go Modules + Makefile |
-| 容器化 | Docker + docker-compose |
-| CI/CD | GitHub Actions |
+> 以下是参考栈（出自 liaison / liaison-cloud 项目实战）。**项目可按团队约定替换**——
+> 例如 Web 框架可换 gin / echo，认证可换 Auth0 / Keycloak / 自研。
+> **强制的是"分层 / 错误处理 / 测试 / 安全"等约束**，不是具体库选型。
+
+| 领域 | 推荐 | 可替换 |
+|------|------|-------|
+| 语言 | Go 1.21+ | — |
+| Web 框架 | go-kratos/kratos v2 | gin / echo / chi |
+| HTTP 路由 | gorilla/mux | net/http ServeMux（Go 1.22+）/ chi |
+| ORM | gorm.io/gorm + gorm.io/driver/mysql | sqlx / ent / sqlc |
+| API 协议 | Protocol Buffers v3 + gRPC + HTTP/REST | OpenAPI + REST |
+| 认证 | Casdoor + JWT (golang-jwt/jwt v5) | Auth0 / Keycloak / Hydra / 自研 |
+| 配置 | gopkg.in/yaml.v2 | viper / koanf / envconfig |
+| 日志 | `log/slog`（推荐，Go 1.21+） | `zap` / 存量项目兼容 `klog` |
+| 指标 | prometheus/client_golang | OpenTelemetry metrics |
+| 追踪 | OpenTelemetry | Jaeger SDK（已弃用） |
+| 测试 | testing + stretchr/testify | gocheck |
+| API 文档 | swaggo/swag | grpc-gateway openapi |
+| 进程管理 | armorigo/sigaction | 标准库 signal.NotifyContext |
+| 日志轮转 | gopkg.in/natefinch/lumberjack.v2 | 系统 logrotate |
+| 构建 | Go Modules + Makefile | Bazel / Earthly |
+| 容器化 | Docker + docker-compose | podman / k8s |
+| CI/CD | GitHub Actions | GitLab CI / Drone / Buildkite |
 
 ## 依赖引入原则
 
