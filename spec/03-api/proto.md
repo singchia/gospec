@@ -5,34 +5,34 @@
 ## Proto 文件规范
 
 ```protobuf
-// api/v1/liaison.proto
+// api/order/v1/order.proto
 syntax = "proto3";
 
-package liaison.v1;
-option go_package = "github.com/singchia/liaison-cloud/api/v1;v1";
+package order.v1;
+option go_package = "github.com/your-org/your-repo/api/order/v1;v1";
 
 // ✅ 推荐：请求/响应命名遵循 <动词><资源>Request/Response
-message CreateEdgeRequest {
+message CreateOrderRequest {
     string name = 1;
     string description = 2;
 }
 
-message CreateEdgeResponse {
+message CreateOrderResponse {
     int32 code = 1;
     string message = 2;
-    Edge data = 3;
+    Order data = 3;
 }
 
 // ✅ 列表接口包含分页字段
-message ListEdgesRequest {
+message ListOrdersRequest {
     int32 page = 1;
     int32 page_size = 2;
 }
 
-message ListEdgesResponse {
+message ListOrdersResponse {
     int32 code = 1;
     string message = 2;
-    repeated Edge data = 3;
+    repeated Order data = 3;
     int64 total = 4;
 }
 ```
@@ -45,7 +45,7 @@ message ListEdgesResponse {
 - 19000-19999 是 protobuf 保留区，不能用
 
 ```protobuf
-message Edge {
+message Order {
     int64 id = 1;          // 高频
     string name = 2;       // 高频
     string description = 3;
@@ -60,23 +60,23 @@ message Edge {
 
 | 类型 | 规范 | 示例 |
 |------|------|------|
-| package | `<service>.v<n>` | `liaison.v1` |
-| message | PascalCase | `CreateEdgeRequest` |
+| package | `<bc>.v<n>` | `order.v1` |
+| message | PascalCase | `CreateOrderRequest` |
 | field | snake_case | `user_id`、`page_size` |
-| enum 类型 | PascalCase | `EdgeStatus` |
-| enum 值 | `<TYPE>_<NAME>`，全大写 | `EDGE_STATUS_ACTIVE` |
-| service | `<Domain>Service` | `EdgeService` |
-| rpc | PascalCase 动词 | `CreateEdge` |
+| enum 类型 | PascalCase | `OrderStatus` |
+| enum 值 | `<TYPE>_<NAME>`，全大写 | `ORDER_STATUS_ACTIVE` |
+| service | `<Domain>Service` | `OrderService` |
+| rpc | PascalCase 动词 | `CreateOrder` |
 
 ## Enum 设计
 
 ```protobuf
 // ✅ 推荐：第 0 个值必须是 UNSPECIFIED
-enum EdgeStatus {
-    EDGE_STATUS_UNSPECIFIED = 0;
-    EDGE_STATUS_ACTIVE = 1;
-    EDGE_STATUS_INACTIVE = 2;
-    EDGE_STATUS_DELETED = 3;
+enum OrderStatus {
+    ORDER_STATUS_UNSPECIFIED = 0;
+    ORDER_STATUS_ACTIVE = 1;
+    ORDER_STATUS_INACTIVE = 2;
+    ORDER_STATUS_DELETED = 3;
 }
 ```
 
@@ -88,7 +88,7 @@ enum EdgeStatus {
 ## 代码生成
 
 ```bash
-protoc --go_out=. --go-grpc_out=. --go-http_out=. api/v1/liaison.proto
+protoc --go_out=. --go-grpc_out=. --go-http_out=. api/order/v1/order.proto
 ```
 
 通过 Makefile 统一封装：
@@ -96,9 +96,9 @@ protoc --go_out=. --go-grpc_out=. --go-http_out=. api/v1/liaison.proto
 ```makefile
 .PHONY: proto
 proto:
-	protoc --proto_path=api/v1 \
+	protoc --proto_path=. \
 	       --go_out=. --go-grpc_out=. --go-http_out=. \
-	       api/v1/*.proto
+	       api/*/v1/*.proto
 ```
 
 **禁止：**

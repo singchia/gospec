@@ -19,16 +19,16 @@
 
 | 部分 | 说明 | 示例 |
 |------|------|------|
-| namespace | 服务名 | `liaison` |
-| subsystem | 模块名 | `iam` / `edge` / `dao` |
+| namespace | 服务名 | `order` |
+| subsystem | 模块名 | `http` / `biz` / `data` |
 | name | 度量含义 | `requests` / `errors` / `duration` |
 | unit | 单位（必填） | `_total` / `_seconds` / `_bytes` |
 
 ```
 # ✅ 正确
-liaison_iam_login_requests_total
-liaison_dao_query_duration_seconds
-liaison_edge_active_connections
+order_http_requests_total
+order_data_query_duration_seconds
+order_biz_active_sessions
 
 # ❌ 错误
 loginCount         # 缺 namespace、单位、复数
@@ -55,7 +55,7 @@ import "github.com/prometheus/client_golang/prometheus"
 var (
     httpRequests = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Namespace: "liaison",
+            Namespace: "order",
             Subsystem: "http",
             Name:      "requests_total",
             Help:      "Total HTTP requests processed.",
@@ -65,7 +65,7 @@ var (
 
     httpDuration = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
-            Namespace: "liaison",
+            Namespace: "order",
             Subsystem: "http",
             Name:      "request_duration_seconds",
             Help:      "HTTP request latency.",

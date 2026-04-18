@@ -21,9 +21,9 @@
 
 ## 强制约束（不可违反）
 
-- 单服务：`cmd → web → controlplane → repo → model`，禁止跨层
-- monorepo：`internal/<domain>` 之间禁止直接 import，必须通过 API / 事件
-- `utils/`、`lerrors/` 不依赖任何业务包
+- 单服务：`cmd → server → service → biz → data → model`，禁止跨层（`service` 不能直连 `data`）
+- monorepo：`cmd/` 按 service 切，`internal/` 按 **Bounded Context** 切；跨 BC 禁止直接 import，必须通过 API / 事件 / `internal/pkg/`
+- `internal/pkg/`、`model/` 不依赖任何业务层
 - 依赖通过构造函数注入，不使用全局变量
 - 涉及架构变更必须先写 ADR，确认后再编码
 - 新服务上线前必须完成"新服务上线 Checklist"（详见 `high-level-design.md`）

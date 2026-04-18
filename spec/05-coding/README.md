@@ -12,28 +12,27 @@
 | 设计构造函数、组合 / 装饰 / 适配 / 重试 / 并发模式 | `patterns.md` |
 | import 顺序、写注释、设计 struct 字段、结构体生命周期 | `style.md` |
 
-## 推荐技术栈（示例 / 非强制）
+## 推荐技术栈（示例，非强制）
 
-> 以下是参考栈（出自 liaison / liaison-cloud 项目实战）。**项目可按团队约定替换**——
-> 例如 Web 框架可换 gin / echo，认证可换 Auth0 / Keycloak / 自研。
-> **强制的是"分层 / 错误处理 / 测试 / 安全"等约束**，不是具体库选型。
+> 以下是参考栈。**规范只约束"分层 / 依赖方向 / 错误处理 / 测试 / 安全"等通用项**——
+> 具体库选型可按团队约定替换，不影响本规范的适用性。
 
-| 领域 | 推荐 | 可替换 |
+| 领域 | 参考 | 常见替换 |
 |------|------|-------|
 | 语言 | Go 1.21+ | — |
-| Web 框架 | go-kratos/kratos v2 | gin / echo / chi |
-| HTTP 路由 | gorilla/mux | net/http ServeMux（Go 1.22+）/ chi |
-| ORM | gorm.io/gorm + gorm.io/driver/mysql | sqlx / ent / sqlc |
-| API 协议 | Protocol Buffers v3 + gRPC + HTTP/REST | OpenAPI + REST |
-| 认证 | Casdoor + JWT (golang-jwt/jwt v5) | Auth0 / Keycloak / Hydra / 自研 |
-| 配置 | gopkg.in/yaml.v2 | viper / koanf / envconfig |
-| 日志 | `log/slog`（推荐，Go 1.21+） | `zap` / 存量项目兼容 `klog` |
+| Web 框架 | Kratos v2 | gin / CloudWeGo Hertz / chi / echo / 原生 net/http |
+| HTTP 路由 | net/http ServeMux（Go 1.22+） | chi / gorilla/mux（2022 年已归档，不建议新项目使用） |
+| ORM | gorm.io/gorm | sqlx / ent / sqlc |
+| API 协议 | Protobuf v3 + gRPC + HTTP/REST | OpenAPI + REST |
+| 认证 | JWT (golang-jwt/jwt v5) | Auth0 / Keycloak / Casdoor / Hydra / 自研 |
+| 配置 | viper / koanf / envconfig / `gopkg.in/yaml.v3` | 同列任选 |
+| 日志 | `log/slog`（Go 1.21+ 推荐） | `zap` / 存量项目兼容 `klog` |
 | 指标 | prometheus/client_golang | OpenTelemetry metrics |
 | 追踪 | OpenTelemetry | Jaeger SDK（已弃用） |
 | 测试 | testing + stretchr/testify | gocheck |
 | API 文档 | swaggo/swag | grpc-gateway openapi |
-| 进程管理 | armorigo/sigaction | 标准库 signal.NotifyContext |
-| 日志轮转 | gopkg.in/natefinch/lumberjack.v2 | 系统 logrotate |
+| 进程管理 | 标准库 `signal.NotifyContext` | — |
+| 日志轮转 | `gopkg.in/natefinch/lumberjack.v2` | 系统 logrotate / sidecar |
 | 构建 | Go Modules + Makefile | Bazel / Earthly |
 | 容器化 | Docker + docker-compose | podman / k8s |
 | CI/CD | GitHub Actions | GitLab CI / Drone / Buildkite |

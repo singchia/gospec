@@ -28,10 +28,10 @@
 
 | 层级 | 目标 | 优先级 |
 |------|------|--------|
-| 工具函数（`utils/`） | 90%+ | P0 |
-| 业务逻辑（`controlplane/`、`iam/`） | 80%+ | P0 |
-| DAO 层 | 70%+ | P1 |
-| 传输层（`web/`） | 60%+ | P2 |
+| 工具 / 纯函数（`internal/pkg/`） | 90%+ | P0 |
+| 业务层（`biz/`） | 80%+ | P0 |
+| 数据访问层（`data/`） | 70%+ | P1 |
+| Handler 层（`service/`） | 60%+ | P2 |
 
 ```bash
 go test ./... -coverprofile=coverage.out
@@ -42,7 +42,7 @@ CI 覆盖率门禁详见 `08-delivery/cicd.md`。
 
 ## 文件组织
 
-- 测试文件与被测文件**同包同目录**：`dao_user_test.go` 与 `dao_user.go` 并列
+- 测试文件与被测文件**同包同目录**：`user_test.go` 与 `user.go` 并列
 - E2E 测试放在 `test/e2e/`，使用独立 build tag
 - 测试辅助函数放 `testutil_test.go` 或 `helpers_test.go`
 

@@ -50,7 +50,7 @@ measurement,tag1=v1,tag2=v2 field1=1.0,field2=2.0 timestamp
 
 ```
 cpu,host=web01,region=cn-north field_value=85.5,used_pct=0.85 1731234567000000000
-http_request,service=liaison,method=GET,status=200 latency_ms=23.5,bytes=1024 1731234567000000000
+http_request,service=order,method=GET,status=200 latency_ms=23.5,bytes=1024 1731234567000000000
 ```
 
 ### Series 基数估算
@@ -66,11 +66,11 @@ total_series = ∏ (每个 tag 的 cardinality)
 
 ```
 # ❌ 反例
-http_request,user_id=12345,url=/api/v1/edges/67890 latency=23
+http_request,user_id=12345,url=/api/v1/orders/67890 latency=23
 # user_id × url = 千万 × 万 = 千亿 series → 爆炸
 
 # ✅ 正确
-http_request,service=liaison,route=/api/v1/edges/:id,method=GET,status=200 latency=23,user_count=1
+http_request,service=order,route=/api/v1/orders/:id,method=GET,status=200 latency=23,user_count=1
 # user_id 不进 tag；如需关联，写日志 / ClickHouse
 ```
 
@@ -82,14 +82,14 @@ http_request,service=liaison,route=/api/v1/edges/:id,method=GET,status=200 laten
 
 | 部分 | 说明 | 示例 |
 |------|------|------|
-| domain | 业务域 | `liaison` / `iot` |
-| entity | 实体 | `device` / `edge` / `http` |
+| domain | 业务域 | `order` / `iot` |
+| entity | 实体 | `device` / `request` / `http` |
 | metric | 度量类型 | `metric` / `event` / `latency` |
 
 ```
 # ✅
-liaison_http_request
-liaison_edge_status
+order_http_request
+order_status_change
 iot_device_metric
 
 # ❌
@@ -102,7 +102,7 @@ device_status_data   # data 是冗余
 
 ```
 # 创建 bucket，TTL 30 天
-influx bucket create -n liaison-metrics -r 30d
+influx bucket create -n foo-metrics -r 30d
 ```
 
 | 数据类型 | 推荐 retention |
@@ -119,12 +119,12 @@ influx bucket create -n liaison-metrics -r 30d
 ```flux
 option task = {name: "downsample-5min", every: 5m}
 
-from(bucket: "liaison-metrics")
+from(bucket: "foo-metrics")
   |> range(start: -10m)
   |> filter(fn: (r) => r._measurement == "http_request")
   |> aggregateWindow(every: 5m, fn: mean, createEmpty: false)
   |> set(key: "_measurement", value: "http_request_5min")
-  |> to(bucket: "liaison-metrics-90d")
+  |> to(bucket: "foo-metrics-90d")
 ```
 
 InfluxDB 1.x 用 **Continuous Query**。
@@ -138,14 +138,14 @@ InfluxDB 1.x 用 **Continuous Query**。
 ```go
 // ✅ 批量写入，每批 5K-10K 点
 client := influxdb2.NewClient(url, token)
-writeAPI := client.WriteAPI("org", "liaison-metrics")
+writeAPI := client.WriteAPI("org", "foo-metrics")
 
 points := make([]*write.Point, 0, 5000)
 for ev := range eventCh {
     p := influxdb2.NewPoint(
         "http_request",
         map[string]string{ // tags
-            "service": "liaison",
+            "service": "order",
             "method":  ev.Method,
             "status":  fmt.Sprintf("%d", ev.Status),
         },
@@ -167,7 +167,7 @@ writeAPI.Flush()
 ### Line Protocol
 
 ```
-http_request,service=liaison,method=GET,status=200 latency_ms=23.5,bytes=1024i 1731234567000000000
+http_request,service=order,method=GET,status=200 latency_ms=23.5,bytes=1024i 1731234567000000000
 ```
 
 - `i` 后缀表示整数（避免被推断为 float）
@@ -187,10 +187,10 @@ http_request,service=liaison,method=GET,status=200 latency_ms=23.5,bytes=1024i 1
 ### Flux（2.x）
 
 ```flux
-from(bucket: "liaison-metrics")
+from(bucket: "foo-metrics")
   |> range(start: -1h)
   |> filter(fn: (r) => r._measurement == "http_request")
-  |> filter(fn: (r) => r.service == "liaison" and r.status == "500")
+  |> filter(fn: (r) => r.service == "order" and r.status == "500")
   |> aggregateWindow(every: 1m, fn: count)
   |> yield(name: "error_count")
 ```
@@ -204,8 +204,8 @@ from(bucket: "liaison-metrics")
 
 ```flux
 // ❌ 没有 range：扫全 bucket
-from(bucket: "liaison-metrics")
-  |> filter(fn: (r) => r.service == "liaison")
+from(bucket: "foo-metrics")
+  |> filter(fn: (r) => r.service == "order")
 ```
 
 ---

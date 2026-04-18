@@ -1,6 +1,6 @@
 ---
 name: gospec
-description: "Go 后端 SDLC 全流程中文规范（Kratos / gRPC / GORM / MySQL / Redis / ClickHouse / InfluxDB）。写或审查 Go 代码、设计 API / 数据模型 / 架构、写测试、配 CI/CD、做日志指标追踪 SLO、处理认证密钥安全、写部署或事故方案、写数据库 migration、起草 PRD / RFC / ADR / HLD 时按需加载。Go backend SDLC spec skill — load on demand for coding, API/schema design, testing, CI/CD, observability, security, ops, DB migration, and PRD/RFC/ADR/HLD docs."
+description: "Go 后端 SDLC 全流程中文规范。覆盖 Bounded Context 切分、Kratos 风格分层（cmd/server/service/biz/data/model）、API 设计、数据模型（MySQL / Redis / ClickHouse / InfluxDB）、测试、CI/CD、日志指标追踪 SLO、认证密钥安全、部署与事故、数据库 migration、PRD/RFC/ADR/HLD 文档。框架中性——Web 框架可选 Kratos / gin / Hertz / chi / echo，规范只约束分层和依赖方向。写或审查 Go 代码时按需加载。Go backend SDLC spec — framework-neutral, load on demand for coding/design/testing/ops/docs."
 license: MIT
 ---
 
@@ -23,20 +23,22 @@ license: MIT
 
 这样无论用户是通过 `npx skills add singchia/gospec`（标准安装，不会自动放 AGENTS.md）还是 `bash <(curl .../install.sh)`（会自动放），最终都能让所有 agent 看到本项目用了 gospec。
 
-## 技术栈
+## 技术栈（示例，非强制）
 
-| 领域 | 选型 |
-|------|------|
-| 语言 | Go 1.21+ |
-| Web 框架 | go-kratos/kratos v2 |
-| ORM | gorm.io/gorm |
-| API | Protocol Buffers v3 + gRPC + HTTP/REST |
-| 认证 | Casdoor + JWT |
-| 日志 | log/slog (推荐) 或 zap |
-| 指标 | Prometheus client_golang |
-| 追踪 | OpenTelemetry |
-| 测试 | testing + stretchr/testify |
-| API 文档 | swaggo/swag |
+规范**只约束分层和依赖方向**，不锁框架。下表是参考选型，项目可按团队约定替换。
+
+| 领域 | 参考选型 | 常见替换 |
+|------|---------|---------|
+| 语言 | Go 1.21+ | — |
+| Web 框架 | Kratos v2 | gin / Hertz / chi / echo / 原生 net/http |
+| ORM | gorm.io/gorm | sqlx / ent / sqlc |
+| API 协议 | Protobuf v3 + gRPC + HTTP/REST | OpenAPI + REST |
+| 认证 | JWT (golang-jwt/jwt v5) | Auth0 / Keycloak / Casdoor / 自研 |
+| 日志 | log/slog（Go 1.21+ 推荐） | zap |
+| 指标 | prometheus/client_golang | OpenTelemetry metrics |
+| 追踪 | OpenTelemetry | — |
+| 测试 | testing + stretchr/testify | — |
+| API 文档 | swaggo/swag | grpc-gateway openapi |
 
 ## 入口文件
 

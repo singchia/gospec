@@ -21,21 +21,23 @@ It is not a static document. It is a **progressive-disclosure knowledge base**: 
 
 > The spec body is in **Chinese**. This matches the primary audience and works seamlessly with any modern LLM. If you need an English adaptation, open an issue — a translation pass is on the roadmap.
 
-## Tech stack baseline
+## Tech stack baseline (reference, swappable)
 
-| Layer | Choice |
-|-------|--------|
-| Language | Go 1.21+ |
-| Web framework | go-kratos/kratos v2 |
-| API protocol | Protocol Buffers v3 + gRPC + HTTP/REST |
-| ORM | gorm.io/gorm |
-| Storage | MySQL / Redis / ClickHouse / InfluxDB |
-| Logging | `log/slog` (preferred) or zap |
-| Metrics | Prometheus client_golang |
-| Tracing | OpenTelemetry |
-| Auth | Casdoor + JWT |
-| Testing | testing + testify + testcontainers-go |
-| CI/CD | GitHub Actions + golangci-lint + govulncheck + trivy + cosign |
+The spec constrains layering, dependency direction, error handling, testing, and security — it is **framework-neutral**. The table below is a reference; swap per your team's choice.
+
+| Layer | Reference | Common swaps |
+|-------|-----------|--------------|
+| Language | Go 1.21+ | — |
+| Web framework | Kratos v2 | gin / CloudWeGo Hertz / chi / echo / net/http |
+| API protocol | Protobuf v3 + gRPC + HTTP/REST | OpenAPI + REST |
+| ORM | gorm.io/gorm | sqlx / ent / sqlc |
+| Storage | MySQL / Redis / ClickHouse / InfluxDB | pick per workload |
+| Logging | `log/slog` (preferred) | zap |
+| Metrics | Prometheus client_golang | OpenTelemetry metrics |
+| Tracing | OpenTelemetry | — |
+| Auth | JWT (golang-jwt/jwt v5) | Auth0 / Keycloak / Casdoor / custom |
+| Testing | testing + testify + testcontainers-go | — |
+| CI/CD | GitHub Actions + golangci-lint + govulncheck + trivy + cosign | GitLab CI / Drone / Buildkite |
 
 Full rationale in `spec/05-coding/README.md`.
 
@@ -123,7 +125,7 @@ The data layer is not just MySQL. `04-data-model/` ships design constraints for 
 
 ### 3. Single-service + monorepo
 
-`02-architecture/` covers both the **intra-service layering** (`cmd → web → controlplane → repo → model`) and the **monorepo repo structure** (`cmd/ internal/ pkg/ api/`), module strategy (single `go.mod` vs `go.work`), domain boundaries, `CODEOWNERS`, and CI affected detection.
+`02-architecture/` covers both the **intra-service layering** (Kratos-style `cmd → server → service → biz → data → model`, framework-neutral) and the **monorepo structure**: **`cmd/` split by service, `internal/` split by Bounded Context**, plus module strategy (single `go.mod` vs `go.work`), linter-enforced BC boundaries, `CODEOWNERS`, and CI affected detection.
 
 ### 4. Design patterns library
 

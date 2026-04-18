@@ -23,25 +23,25 @@ import (
     "go.opentelemetry.io/otel/codes"
 )
 
-var tracer = otel.Tracer("liaison/controlplane")
+var tracer = otel.Tracer("order/biz")
 
-func (s *EdgeService) CreateEdge(ctx context.Context, req *v1.CreateEdgeRequest) (*v1.CreateEdgeResponse, error) {
-    ctx, span := tracer.Start(ctx, "EdgeService.CreateEdge")
+func (uc *OrderUsecase) CreateOrder(ctx context.Context, input *CreateOrderInput) (*Order, error) {
+    ctx, span := tracer.Start(ctx, "OrderUsecase.CreateOrder")
     defer span.End()
 
     span.SetAttributes(
         attribute.Int64("user.id", userIDFromCtx(ctx)),
-        attribute.String("edge.name", req.Name),
+        attribute.String("order.name", input.Name),
     )
 
-    edge, err := s.repo.CreateEdge(ctx, req)
+    order, err := uc.repo.Create(ctx, input)
     if err != nil {
         span.RecordError(err)
         span.SetStatus(codes.Error, err.Error())
         return nil, err
     }
-    span.SetAttributes(attribute.Int64("edge.id", edge.ID))
-    return &v1.CreateEdgeResponse{Data: edge}, nil
+    span.SetAttributes(attribute.Int64("order.id", order.ID))
+    return order, nil
 }
 ```
 

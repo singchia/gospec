@@ -10,13 +10,13 @@
 
 ```go
 // ✅ 推荐：validator + 业务规则
-type CreateEdgeRequest struct {
-    Name string `json:"name" validate:"required,min=1,max=64,alphanum"`
-    Port int    `json:"port" validate:"required,min=1,max=65535"`
+type CreateOrderRequest struct {
+    Name     string `json:"name"     validate:"required,min=1,max=64,alphanum"`
+    Quantity int    `json:"quantity" validate:"required,min=1,max=9999"`
 }
 
 if err := validate.Struct(req); err != nil {
-    return nil, kratoserrors.New(400, "INVALID_PARAM", err.Error())
+    return nil, errs.NewInvalidParam(err.Error())
 }
 ```
 
@@ -26,10 +26,10 @@ if err := validate.Struct(req); err != nil {
 
 ```go
 // ✅ GORM 参数化
-db.Where("user_id = ? AND status = ?", userID, status).Find(&edges)
+db.Where("user_id = ? AND status = ?", userID, status).Find(&orders)
 
 // ❌ 字符串拼接
-db.Where(fmt.Sprintf("user_id = %d", userID)).Find(&edges)
+db.Where(fmt.Sprintf("user_id = %d", userID)).Find(&orders)
 db.Raw("SELECT * FROM users WHERE name = '" + name + "'").Scan(&users)
 ```
 
@@ -113,7 +113,7 @@ func encryptField(plaintext, key []byte) ([]byte, error) {
 // ✅ golang.org/x/time/rate
 limiter := rate.NewLimiter(rate.Limit(100), 200) // 100/s，桶容量 200
 if !limiter.Allow() {
-    return nil, kratoserrors.New(429, "RATE_LIMITED", "请求过于频繁")
+    return nil, errs.NewRateLimited("请求过于频繁")
 }
 ```
 

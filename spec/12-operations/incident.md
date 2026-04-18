@@ -113,7 +113,7 @@ Detect → Triage → Mitigate → Resolve → Learn
 2. 链路追踪：<link>
 3. 关键日志查询：
    ```bash
-   kubectl logs -l app=liaison --tail=100 | grep ERROR
+   kubectl logs -l app=order-api --tail=100 | grep ERROR
    ```
 
 ## 常见原因与处置
@@ -125,7 +125,7 @@ Detect → Triage → Mitigate → Resolve → Learn
   3. 联系 DBA
 
 ## 止血手段
-- [ ] 回滚：`kubectl rollout undo deploy/liaison`
+- [ ] 回滚：`kubectl rollout undo deploy/order-api`
 - [ ] 降级：关闭 feature flag
 - [ ] 扩容
 

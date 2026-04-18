@@ -12,7 +12,7 @@
 |------|------|------|
 | 主键 | `id`，bigint，自增 | `id` |
 | 时间字段 | snake_case，`_at` 后缀 | `created_at`、`updated_at`、`deleted_at` |
-| 外键 | `<关联表单数>_id` | `user_id`、`edge_id` |
+| 外键 | `<关联表单数>_id` | `user_id`、`order_id` |
 | 状态字段 | `status`，tinyint 或 varchar | `status` |
 | 布尔字段 | `is_<描述>` 或 `<描述>_enabled` | `is_active`、`email_verified` |
 
@@ -78,15 +78,16 @@ func (User) TableName() string { return "users" }
 ### Repo 聚合接口
 
 ```go
-// pkg/liaison/repo/repo.go
-type Repo interface {
-    CreateUser(user *model.User) error
-    GetUserByID(id int64) (*model.User, error)
-    GetUserByEmail(email string) (*model.User, error)
-    ListUsers(page, pageSize int) ([]*model.User, int64, error)
-    Close() error
+// internal/user/biz/user.go  — 接口定义在消费方（biz）
+type UserRepo interface {
+    Create(ctx context.Context, user *model.User) error
+    GetByID(ctx context.Context, id int64) (*model.User, error)
+    GetByEmail(ctx context.Context, email string) (*model.User, error)
+    List(ctx context.Context, page, pageSize int) ([]*model.User, int64, error)
 }
 ```
+
+实现放在 `internal/user/data/user.go`，见 `02-architecture/layering.md`。
 
 ### DAO 接口（支持事务）
 
@@ -139,11 +140,11 @@ defer func() {
     }
 }()
 
-if err := txDao.CreateEdge(edge); err != nil {
+if err := txDao.CreateOrder(ctx, order); err != nil {
     txDao.Rollback()
     return err
 }
-if err := txDao.UpdateUserQuota(userID, quota); err != nil {
+if err := txDao.UpdateUserQuota(ctx, userID, quota); err != nil {
     txDao.Rollback()
     return err
 }
@@ -162,18 +163,18 @@ return txDao.Commit()
 
 ```go
 // ✅ 列表查询必须分页
-func (d *dao) ListEdges(page, pageSize int, userID int64) ([]*model.Edge, int64, error) {
-    var edges []*model.Edge
+func (d *dao) ListOrders(ctx context.Context, page, pageSize int, userID int64) ([]*model.Order, int64, error) {
+    var orders []*model.Order
     var total int64
 
-    db := d.getDB().Model(&model.Edge{}).Where("user_id = ?", userID)
+    db := d.getDB().WithContext(ctx).Model(&model.Order{}).Where("user_id = ?", userID)
     if err := db.Count(&total).Error; err != nil {
         return nil, 0, err
     }
-    if err := db.Offset((page - 1) * pageSize).Limit(pageSize).Find(&edges).Error; err != nil {
+    if err := db.Offset((page - 1) * pageSize).Limit(pageSize).Find(&orders).Error; err != nil {
         return nil, 0, err
     }
-    return edges, total, nil
+    return orders, total, nil
 }
 ```
 
@@ -182,7 +183,7 @@ func (d *dao) ListEdges(page, pageSize int, userID int64) ([]*model.Edge, int64,
 ```go
 // ✅ 游标分页：基于 id > last_id
 db.Where("id > ? AND user_id = ?", lastID, userID).
-    Order("id ASC").Limit(pageSize).Find(&edges)
+    Order("id ASC").Limit(pageSize).Find(&orders)
 ```
 
 ---
@@ -200,8 +201,7 @@ func (d *dao) initDB() error {
     }
     return d.db.AutoMigrate(
         &model.User{},
-        &model.Edge{},
-        &model.Device{},
+        &model.Order{},
     )
 }
 ```

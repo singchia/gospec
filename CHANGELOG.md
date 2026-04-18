@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-18
+
+### Changed (BREAKING — 去特化 / 去框架锁定)
+
+**核心约束重写**：从 liaison-cloud 项目特化口径换成社区通用口径，规范只约束分层和依赖方向，**不锁框架**。
+
+- **分层命名换 Kratos 风格**：`cmd → web → controlplane → repo → model` ⇒ `cmd → server → service → biz → data → model`。
+  - `web` → `service`（Handler 层）
+  - `controlplane` → `biz`（业务用例 / 领域服务）
+  - `repo` → `data`（数据访问层）
+  - 新增规则："`service` 不能直连 `data`，必须过 `biz`"
+  - 映射表覆盖 Clean Arch / go-zero 风格，项目可按团队约定替换，规范只要求**选一套坚持到底**。
+- **monorepo 按 Bounded Context 切分**：`cmd/` 按 service 切（命名 `<bc>-<role>`），`internal/` 按 Bounded Context 切（DDD 限界上下文，5k~30k LOC）；跨 BC 禁止直接 import，走 API / 事件 / `internal/pkg/`。`internal/shared/` 改名 `internal/pkg/`。新增"MVP 阶段可扁平化"和"什么时候升级回 domain-first"指引。
+- **Web 框架不锁死**：显式支持 Kratos v2 / gin / CloudWeGo Hertz / chi / echo / 原生 net/http。`server/` 层装配细节依框架而定，`03-api/middleware.md` 和 `03-api/http.md` 都给了 Kratos + gin 两套示例。
+- **技术栈表加"参考选型 / 常见替换"两列**：SKILL.md / README.md / README.en.md / `05-coding/README.md` 四处同步。
+  - 认证从 "Casdoor + JWT" 改为 "JWT + (Auth0 / Keycloak / Casdoor / 自研)"。
+  - `gorilla/mux` 标注"2022 年已归档，不建议新项目使用"。
+  - `gopkg.in/yaml.v2` 换成 `yaml.v3` / viper / koanf / envconfig。
+  - 进程管理从 `armorigo/sigaction`（作者自建库）换成标准库 `signal.NotifyContext`。
+- **全量替换代码示例里的项目特化词**：`liaison` → `foo` / `order`；`Edge` / `CreateEdge` → `Order` / `CreateOrder`；`IAMService` → `UserUsecase`；`lerrors` → `errs`；proto package `liaison.v1` → `order.v1`；Redis namespace `liaison:` → `foo:`；ClickHouse `liaison.events` → `foo.events`；InfluxDB `liaison-metrics` → `foo-metrics`；cmd 入口 `cmd/manager/` → `cmd/order-api/`。
+- **SKILL.md description 改写**：去掉 "Kratos / gRPC / GORM / MySQL / Redis / ClickHouse / InfluxDB" 的硬性列举，改成"框架中性，Web 框架可选 Kratos / gin / Hertz / chi / echo"。
+- **HLD 模板模块表更新**：按新分层重写 `internal/<bc>/{server,service,biz,data,model}` 映射表。
+- **Cursor 规则模板同步**：`docs/templates/cursor-rule-template.mdc` 的核心约束同步新分层和 BC 切分。
+
+### Migration note
+
+升级到 0.3.0 后，如果你的项目延续了旧的 `web/controlplane/repo` 目录命名，**不需要立刻重构**——规范提供了 Kratos / Clean Arch / go-zero 三套风格的映射表，选一套坚持到底即可。核心约束（依赖单向、handler 不直连 data、跨 BC 不 import）新旧命名都适用。
+
+## [0.2.0] - 2026-04-15
+
 ### Changed
 
 - **SKILL.md `description` 大幅缩短**（~1024 字符 → ~250 字符），提升 agent 激活匹配准确率。

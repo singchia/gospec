@@ -65,7 +65,7 @@ Test<功能>_<场景>_<预期结果>
 
 ```
 TestLogin_WhenRateLimited_Returns429
-TestCreateEdge_WithDuplicateName_ReturnsError
+TestCreateOrder_WithDuplicateName_ReturnsError
 TestGetUser_WhenNotFound_ReturnsErrNotFound
 ```
 
@@ -88,8 +88,8 @@ func (m *MockRepo) GetUserByID(id int64) (*model.User, error) {
     return nil, gorm.ErrRecordNotFound
 }
 
-func TestIAMService_Login(t *testing.T) {
-    svc := NewIAMService(testConf(), &MockRepo{
+func TestUserUsecase_Login(t *testing.T) {
+    uc := biz.NewUserUsecase(testConf(), &MockRepo{
         users: map[int64]*model.User{1: {ID: 1, Email: "test@example.com"}},
     })
     // ...
@@ -120,13 +120,11 @@ func setupTestDAO(t *testing.T) Dao {
     return dao
 }
 
-func testConfig() *config.Configuration {
-    return &config.Configuration{
-        Manager: config.Manager{
-            Database: config.Database{
-                Driver: "mysql",
-                DSN:    os.Getenv("TEST_DB_DSN"),
-            },
+func testConfig() *conf.Config {
+    return &conf.Config{
+        Database: conf.Database{
+            Driver: "mysql",
+            DSN:    os.Getenv("TEST_DB_DSN"),
         },
     }
 }

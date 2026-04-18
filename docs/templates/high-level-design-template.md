@@ -21,16 +21,18 @@
 
 | 模块 | 包路径 | 职责 |
 |------|--------|------|
-| 传输层 | `pkg/.../web/` | HTTP handler，参数解析 |
-| 业务层 | `pkg/.../controlplane/` | 核心业务逻辑 |
-| 数据层 | `pkg/.../repo/` | 数据访问 |
+| Server 装配 | `internal/<bc>/server/` | HTTP/gRPC Server 构造、中间件链、路由注册 |
+| Handler | `internal/<bc>/service/` | proto/HTTP 接口实现、参数校验、错误映射 |
+| 业务层 | `internal/<bc>/biz/` | 核心业务逻辑、用例编排、事务边界 |
+| 数据层 | `internal/<bc>/data/` | 数据访问（DAO / ORM / 缓存封装） |
+| 领域对象 | `internal/<bc>/model/` | 领域对象 / 持久化实体 |
 
 ## 核心数据流
 
 ```
-请求 → 中间件（认证） → Handler → ControlPlane → DAO → MySQL
-                                      ↓
-                               外部系统（Casdoor/Frontier）
+请求 → 中间件（认证/tracing/限流） → Handler（service/） → Usecase（biz/） → Repo（data/） → MySQL
+                                                               ↓
+                                                      外部系统 / 依赖 BC（走 API / 事件）
 ```
 
 ## 关键接口定义
@@ -59,7 +61,7 @@ type NewEntity struct {
 
 ## 部署方案
 
-- 服务依赖：MySQL、Casdoor、Frontier
+- 服务依赖：MySQL、Redis、认证服务（Keycloak / Casdoor / Auth0 / 自研）、上下游 BC
 - 端口：XXXX
 - 配置项：`config.yaml` 中 `xxx.yyy` 字段
 

@@ -8,15 +8,15 @@
 
 ```go
 // @Summary Login
-// @Tags IAM
+// @Tags User
 // @Accept json
 // @Produce json
 // @Param params body v1.LoginRequest true "登录请求"
 // @Success 200 {object} v1.LoginResponse
 // @Failure 401 {object} v1.ErrorResponse
 // @Failure 429 {object} v1.ErrorResponse
-// @Router /api/v1/iam/login [post]
-func (web *web) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginResponse, error) {
+// @Router /api/v1/users/login [post]
+func (s *UserService) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginResponse, error) {
 ```
 
 **必填字段：**
@@ -30,10 +30,10 @@ func (web *web) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginRespo
 | `@Failure` | 关键错误响应（401、403、429、500） |
 | `@Router` | 路径 + HTTP 方法 |
 
-生成命令：
+生成命令（以 swaggo/swag 为例）：
 
 ```bash
-swag init -g cmd/manager/main.go -o docs/swagger/
+swag init -g cmd/api/main.go -o docs/swagger/
 ```
 
 **禁止：**
@@ -46,22 +46,40 @@ swag init -g cmd/manager/main.go -o docs/swagger/
 
 > 密码存储、JWT 算法选择、Refresh Token、登录限流等细节详见 `11-security/auth.md`。本节只讲中间件层的接入。
 
+以下示例以 Kratos middleware 为例；gin / hertz / chi 有各自的 middleware API，但职责完全一致：**从 Authorization header 解析 token → 校验 → 把认证用户注入 context**。
+
 ```go
-// ✅ 推荐：中间件从 Authorization header 提取 token 并注入 context
-func AuthMiddleware(svc *IAMService) middleware.Middleware {
+// Kratos 风格
+func AuthMiddleware(authSvc AuthService) middleware.Middleware {
     return func(handler middleware.Handler) middleware.Handler {
         return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
             if isPublicRoute(ctx) {
                 return handler(ctx, req)
             }
             token := extractBearerToken(ctx)
-            user, err := svc.GetUserByToken(token)
+            user, err := authSvc.GetUserByToken(ctx, token)
             if err != nil {
                 return nil, kratoserrors.New(401, "UNAUTHORIZED", "未认证")
             }
-            ctx = context.WithValue(ctx, "user", user)
+            ctx = context.WithValue(ctx, userKey, user)
             return handler(ctx, req)
         }
+    }
+}
+```
+
+```go
+// gin 风格
+func AuthMiddleware(authSvc AuthService) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if isPublicRoute(c) { c.Next(); return }
+        user, err := authSvc.GetUserByToken(c.Request.Context(), extractBearerToken(c.Request))
+        if err != nil {
+            c.AbortWithStatusJSON(401, Response{Code: 401, Message: "未认证"})
+            return
+        }
+        c.Set("user", user)
+        c.Next()
     }
 }
 ```
@@ -71,18 +89,16 @@ func AuthMiddleware(svc *IAMService) middleware.Middleware {
 ```go
 // ✅ 推荐：公开路由集中维护，非白名单的路由默认要鉴权
 var publicRoutes = map[string]bool{
-    "/api/v1/iam/login":    true,
-    "/api/v1/iam/signup":   true,
-    "/api/v1/iam/captcha":  true,
-    "/healthz":             true,
-    "/readyz":              true,
-    "/metrics":             true,
+    "/api/v1/users/login":   true,
+    "/api/v1/users/signup":  true,
+    "/api/v1/users/captcha": true,
+    "/healthz":              true,
+    "/readyz":               true,
+    "/metrics":              true,
 }
 
-func isPublicRoute(ctx context.Context) bool {
-    op := transport.OperationFromContext(ctx)
-    return publicRoutes[op]
-}
+// 具体实现依框架而定：Kratos 用 transport.OperationFromContext(ctx)；
+// gin 用 c.FullPath()；hertz / chi 有各自的路由 API。
 ```
 
 **规则：**

@@ -25,24 +25,24 @@
 
 | 部分 | 说明 | 示例 |
 |------|------|------|
-| service | 服务名（namespace） | `liaison` |
-| entity | 业务实体 | `user` / `edge` / `session` |
+| service | 服务名（namespace） | `foo` |
+| entity | 业务实体 | `user` / `order` / `session` |
 | id | 实体 ID | `12345` |
 | attr | 子属性（可选） | `profile` / `quota` |
 
 ```
 # ✅ 正确
-liaison:user:12345:profile
-liaison:edge:67890:status
-liaison:session:abc123def456
-liaison:lock:order:create:12345
-liaison:ratelimit:login:1.2.3.4
+foo:user:12345:profile
+foo:order:67890:status
+foo:session:abc123def456
+foo:lock:order:create:12345
+foo:ratelimit:login:1.2.3.4
 
 # ❌ 错误
 user_12345                  # 缺 namespace，多服务共用 Redis 会冲突
-liaison.user.12345          # 用 . 不用 :（Redis 约定用 :）
+foo.user.12345              # 用 . 不用 :（Redis 约定用 :）
 USER:12345                  # 大小写混用
-liaison:user:12345:name:email:phone:address  # 嵌套过深
+foo:user:12345:name:email:phone:address  # 嵌套过深
 ```
 
 **规则：**
@@ -84,10 +84,10 @@ redis.Set(ctx, key, val, 0)
 ```go
 // 业务对象用 JSON
 data, _ := json.Marshal(user)
-redis.Set(ctx, "liaison:user:123", data, time.Hour)
+redis.Set(ctx, "foo:user:123", data, time.Hour)
 
 // 计数器用 INCR
-redis.Incr(ctx, "liaison:counter:order:today")
+redis.Incr(ctx, "foo:counter:order:today")
 ```
 
 ### Hash
@@ -95,12 +95,12 @@ redis.Incr(ctx, "liaison:counter:order:today")
 存对象，**单字段更新**比 String JSON 高效。
 
 ```go
-redis.HSet(ctx, "liaison:user:123", map[string]interface{}{
+redis.HSet(ctx, "foo:user:123", map[string]interface{}{
     "name":    "alice",
     "email":   "a@b.com",
     "balance": 100,
 })
-redis.HIncrBy(ctx, "liaison:user:123", "balance", -10)
+redis.HIncrBy(ctx, "foo:user:123", "balance", -10)
 ```
 
 **何时选 Hash 而非 String**：字段独立更新频繁、字段数 < 100。
@@ -111,11 +111,11 @@ redis.HIncrBy(ctx, "liaison:user:123", "balance", -10)
 
 ```go
 // 排行榜
-redis.ZIncrBy(ctx, "liaison:rank:daily", 1, "user:123")
-redis.ZRevRangeWithScores(ctx, "liaison:rank:daily", 0, 9)
+redis.ZIncrBy(ctx, "foo:rank:daily", 1, "user:123")
+redis.ZRevRangeWithScores(ctx, "foo:rank:daily", 0, 9)
 
 // 延时队列：score = 执行时间戳
-redis.ZAdd(ctx, "liaison:delay:queue", redis.Z{Score: float64(execAt), Member: jobID})
+redis.ZAdd(ctx, "foo:delay:queue", redis.Z{Score: float64(execAt), Member: jobID})
 ```
 
 ### List vs Stream
@@ -139,7 +139,7 @@ redis.Set(ctx, "all_users", marshal(allUsers), 0) // 几 MB
 
 // ✅ 拆分
 for _, u := range users {
-    redis.Set(ctx, fmt.Sprintf("liaison:user:%d", u.ID), marshal(u), time.Hour)
+    redis.Set(ctx, fmt.Sprintf("foo:user:%d", u.ID), marshal(u), time.Hour)
 }
 ```
 
@@ -147,7 +147,7 @@ for _, u := range users {
 
 ### 热 Key 应对
 
-- 多副本：`liaison:hot:counter:1` ~ `liaison:hot:counter:N`，写时随机、读时聚合
+- 多副本：`foo:hot:counter:1` ~ `foo:hot:counter:N`，写时随机、读时聚合
 - 本地缓存（freecache / bigcache）兜底
 - Lua 脚本合并多次操作
 
@@ -164,7 +164,7 @@ if cur == 1 then
 end
 return cur
 `
-n, err := redis.Eval(ctx, rateLimitScript, []string{"liaison:ratelimit:" + ip}, 60).Int()
+n, err := redis.Eval(ctx, rateLimitScript, []string{"foo:ratelimit:" + ip}, 60).Int()
 if n > 100 { return ErrRateLimited }
 ```
 
@@ -173,9 +173,9 @@ if n > 100 { return ErrRateLimited }
 ```go
 // ✅ SET NX EX + 唯一 owner + Lua 释放
 owner := uuid.NewString()
-ok, _ := redis.SetNX(ctx, "liaison:lock:order:123", owner, 30*time.Second).Result()
+ok, _ := redis.SetNX(ctx, "foo:lock:order:123", owner, 30*time.Second).Result()
 if !ok { return ErrLocked }
-defer releaseLock(ctx, "liaison:lock:order:123", owner)
+defer releaseLock(ctx, "foo:lock:order:123", owner)
 
 const releaseScript = `
 if redis.call("GET", KEYS[1]) == ARGV[1] then
@@ -214,7 +214,7 @@ redis.Set(ctx, key, val, ttl)
 // ✅ Pipeline
 pipe := redis.Pipeline()
 for _, id := range ids {
-    pipe.Get(ctx, fmt.Sprintf("liaison:user:%d", id))
+    pipe.Get(ctx, fmt.Sprintf("foo:user:%d", id))
 }
 results, _ := pipe.Exec(ctx)
 ```
@@ -224,7 +224,7 @@ results, _ := pipe.Exec(ctx)
 ## Cluster 注意事项
 
 - 单次命令的所有 key 必须在同一 slot，否则报错
-- 用 hash tag 强制同 slot：`liaison:user:{12345}:profile` 和 `liaison:user:{12345}:quota` 在同 slot
+- 用 hash tag 强制同 slot：`foo:user:{12345}:profile` 和 `foo:user:{12345}:quota` 在同 slot
 - `MGET`、`MSET`、事务、Lua 都需要同 slot
 
 ## 持久化与可用性

@@ -38,21 +38,21 @@ sha1.Sum([]byte(password))
 
 ### RBAC 优先
 
-角色 → 权限 → 资源。检查必须在**业务层**（controlplane）执行，传输层（web）只是补充。
+角色 → 权限 → 资源。检查必须在**业务层**（`biz/`）执行，Handler 层（`service/`）只是补充。
 
 ### 多租户隔离
 
 ```go
-// ✅ 推荐：业务层强制租户隔离
-func (s *EdgeService) GetEdge(ctx context.Context, edgeID int64) (*model.Edge, error) {
+// ✅ 推荐：业务层（biz/）强制租户隔离
+func (uc *OrderUsecase) GetOrder(ctx context.Context, orderID int64) (*model.Order, error) {
     user := userFromCtx(ctx)
-    edge, err := s.repo.GetEdgeByID(edgeID)
+    order, err := uc.repo.GetByID(ctx, orderID)
     if err != nil { return nil, err }
-    if edge.TenantID != user.TenantID {
+    if order.TenantID != user.TenantID {
         // 注意：返回 NotFound 而非 Forbidden，避免泄露资源存在
         return nil, ErrNotFound
     }
-    return edge, nil
+    return order, nil
 }
 ```
 

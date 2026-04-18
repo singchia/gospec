@@ -38,10 +38,10 @@
 > 这些是任何任务都要守的红线。不论 agent 是否加载了完整 spec，都不能违反。
 
 ### 架构
-- **单服务**：`cmd → web → controlplane → repo → model`，禁止跨层调用
-- **monorepo**：`internal/<domain>` 之间禁止直接 import，必须通过 API / 事件 / `internal/shared/`
+- **单服务**：`cmd → server → service → biz → data → model`，禁止跨层调用（`service` 不能直连 `data`）
+- **monorepo**：`cmd/` 按 service 切、`internal/` 按 **Bounded Context** 切；跨 BC 禁止直接 import，必须通过 API / 事件 / `internal/pkg/`
 - 接口在消费方定义，禁止循环依赖
-- `utils/`、`lerrors/` 不依赖任何业务包
+- `internal/pkg/`、`model/` 不依赖任何业务层
 - 依赖通过构造函数注入，不使用全局变量
 - 每个目录都被 CODEOWNERS 覆盖
 

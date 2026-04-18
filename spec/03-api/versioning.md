@@ -6,7 +6,7 @@
 
 ### 版本前缀
 
-URL 必须带版本：`/api/v1/`、`/api/v2/`。Proto package 同步：`liaison.v1`、`liaison.v2`。
+URL 必须带版本：`/api/v1/`、`/api/v2/`。Proto package 同步：`order.v1`、`order.v2`。
 
 ### 兼容性原则
 
@@ -25,24 +25,24 @@ URL 必须带版本：`/api/v1/`、`/api/v2/`。Proto package 同步：`liaison.
 ### Deprecation 流程
 
 ```protobuf
-message ListEdgesResponse {
-    repeated Edge data = 1;
+message ListOrdersResponse {
+    repeated Order data = 1;
     int64 total = 2;
     int64 next_cursor = 3 [deprecated = true]; // 标记废弃
 }
 ```
 
 ```go
-// ✅ Handler 在响应头加废弃提示
-func (web *web) ListEdges(ctx context.Context, ...) (..., error) {
-    if httpReq, ok := kratoshttp.RequestFromServerContext(ctx); ok {
-        kratoshttp.SetResponseHeader(httpReq.Context(), "Deprecation", "true")
-        kratoshttp.SetResponseHeader(httpReq.Context(), "Sunset", "Wed, 11 Nov 2026 23:59:59 GMT")
-        kratoshttp.SetResponseHeader(httpReq.Context(), "Link", "</api/v2/edges>; rel=\"successor-version\"")
-    }
+// ✅ Handler 在响应头加废弃提示（以 *http.Request/ResponseWriter 为例，框架中性）
+func (s *OrderService) ListOrders(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Deprecation", "true")
+    w.Header().Set("Sunset", "Wed, 11 Nov 2026 23:59:59 GMT")
+    w.Header().Set("Link", `</api/v2/orders>; rel="successor-version"`)
     // ...
 }
 ```
+
+Kratos / gin / hertz 各自提供设置响应头的 API，按框架文档调用即可。
 
 ### 版本下线流程
 
@@ -126,14 +126,14 @@ X-RateLimit-Reset: 1731234567      # 配额重置时间戳
 ### 命名
 
 ```
-POST /api/v1/edges:batchCreate
-POST /api/v1/edges:batchDelete
+POST /api/v1/orders:batchCreate
+POST /api/v1/orders:batchDelete
 ```
 
 或 RPC 风格：
 
 ```
-rpc BatchCreateEdges(BatchCreateEdgesRequest) returns (BatchCreateEdgesResponse);
+rpc BatchCreateOrders(BatchCreateOrdersRequest) returns (BatchCreateOrdersResponse);
 ```
 
 ### 部分成功
@@ -141,23 +141,23 @@ rpc BatchCreateEdges(BatchCreateEdgesRequest) returns (BatchCreateEdgesResponse)
 批量接口需要支持"部分成功"：
 
 ```protobuf
-message BatchCreateEdgesResponse {
+message BatchCreateOrdersResponse {
     int32 code = 1;
     string message = 2;
     BatchResult data = 3;
 }
 
 message BatchResult {
-    repeated EdgeResult results = 1;
+    repeated OrderResult results = 1;
     int32 success_count = 2;
     int32 failed_count = 3;
 }
 
-message EdgeResult {
+message OrderResult {
     int32 index = 1;       // 对应请求中的下标
     int32 code = 2;        // 单条结果的 code
     string error = 3;      // 单条失败原因
-    Edge edge = 4;         // 成功时返回
+    Order order = 4;       // 成功时返回
 }
 ```
 
@@ -173,13 +173,13 @@ message EdgeResult {
 对深翻页友好的列表接口建议用 cursor：
 
 ```protobuf
-message ListEdgesRequest {
+message ListOrdersRequest {
     int32 page_size = 1;
     string page_token = 2;  // 上一次返回的 next_page_token
 }
 
-message ListEdgesResponse {
-    repeated Edge data = 1;
+message ListOrdersResponse {
+    repeated Order data = 1;
     string next_page_token = 2;  // 空字符串表示无更多数据
 }
 ```

@@ -1,8 +1,36 @@
-# 02.3 - Monorepo 仓库结构
+# 02.3 - Monorepo 仓库结构（按 Bounded Context 切分）
 
 > **适用**：初始化 monorepo、加新服务、决定 module 策略、配 CODEOWNERS、配 affected detection。
 >
-> 本规范基于 [Standard Go Project Layout](https://github.com/golang-standards/project-layout) 和 Google / Uber 等大厂 monorepo 实践。
+> 本规范参考 [Standard Go Project Layout](https://github.com/golang-standards/project-layout)、Kratos 官方模板，以及 Google / Uber 等大厂 monorepo 实践。
+
+## 先搞清楚两个概念
+
+**service ≠ domain**：
+
+- **service**：一个可部署单元（一个二进制 / 一个容器）
+- **domain (Bounded Context)**：一个业务边界（DDD 限界上下文）
+
+它们是多对多的关系：
+
+```
+场景 1：1 BC → 1 service（最常见）
+  cmd/order-api/main.go  装配  internal/order/{server,service,biz,data,model}
+
+场景 2：1 BC → 多 service（API + worker + cli）
+  cmd/order-api/     ┐
+  cmd/order-worker/  ├─ 都用 internal/order/{biz,data}
+  cmd/order-cli/     ┘
+
+场景 3：1 service → 多 BC（BFF / 网关，谨慎用）
+  cmd/bff-web/  装配  internal/{user,order,billing} 的对外接口
+```
+
+**顶层切分规则**：
+- `cmd/` **按 service 切**——扫一眼知道有几个部署单元
+- `internal/` **按 BC 切**——扫一眼知道有几个业务领域
+
+---
 
 ## 何时选 monorepo
 
@@ -21,163 +49,208 @@
 
 ---
 
+## Bounded Context 是什么粒度
+
+**中等粒度——DDD 的限界上下文 / Subdomain**，不是"整个业务"，也不是"一个用例"。
+
+| 粒度 | 例子 | 对不对 |
+|------|------|-------|
+| 太大（整个产品） | `internal/ecommerce/` | ❌ 等于没切 |
+| **刚好（BC）** | `internal/order/` `internal/iam/` `internal/billing/` `internal/inventory/` `internal/notification/` | ✅ 本规范推荐粒度 |
+| 太小（用例 / 功能） | `internal/user_login/` `internal/order_cancel/` | ❌ 这只是 biz 里的一个 method |
+
+### 判定一个 BC 粒度合适的四条标准
+
+1. **独立团队可拥有**（CODEOWNERS 填一个团队，不打架）
+2. **有自己的持久化数据**（自己的表 / Kafka topic / stream），不读别人的表
+3. **有自己的"行话"**（同一个词在不同 BC 里有不同含义 = 是两个 BC）
+4. **未来能独立拆成微服务**而不需要大手术
+
+### 经验值
+
+- Go 代码量：**5k ~ 30k LOC**。< 3k 说明可能只是个功能；> 50k 应该继续拆
+- 每个 BC 下面有一套完整 `server/service/biz/data/model`
+- 犹豫"该放 A 还是 B"说明边界不清——先写 ADR 再切
+
+### 真实案例参考
+
+- **电商**：`iam` / `catalog` / `cart` / `order` / `payment` / `inventory` / `shipping` / `notification`
+- **SaaS**：`tenant` / `billing` / `auth` / `audit` / `feature-flag`
+- **IoT 云**：`device` / `iam` / `billing` / `telemetry` / `ota`
+
+---
+
 ## 标准目录布局
 
 ```
 repo-root/
-├── api/                    # Proto 定义（所有服务共享）
-│   ├── v1/
-│   │   ├── liaison.proto
-│   │   └── billing.proto
-│   ├── v2/
-│   └── buf.yaml            # buf 工具配置
+├── api/                             # Proto 定义（按 BC 分组）
+│   ├── user/v1/
+│   │   └── user.proto
+│   ├── order/v1/
+│   │   └── order.proto
+│   ├── billing/v1/
+│   └── buf.yaml                     # buf 工具配置
 │
-├── cmd/                    # 每个可执行入口
-│   ├── manager/            # liaison-manager 服务
+├── cmd/                             # 按 service 切（一个入口一个目录）
+│   ├── order-api/                   # order BC 的 HTTP/gRPC 服务
 │   │   └── main.go
-│   ├── worker/             # 后台 worker
+│   ├── order-worker/                # order BC 的后台消费者
 │   │   └── main.go
-│   └── cli/                # 命令行工具
+│   ├── user-api/
+│   │   └── main.go
+│   └── bff-web/                     # 跨 BC 的 BFF
 │       └── main.go
 │
-├── internal/               # 仅本仓库使用，外部无法 import
-│   ├── liaison/            # 业务领域 1
-│   │   ├── controlplane/
-│   │   ├── repo/
-│   │   ├── model/
-│   │   └── web/
-│   ├── billing/            # 业务领域 2
+├── internal/                        # 仅本仓库使用，Go 编译器强制边界
+│   ├── order/                       # Bounded Context 1
+│   │   ├── server/                  # HTTP/gRPC Server 装配
+│   │   ├── service/                 # Handler（proto impl）
+│   │   ├── biz/                     # 业务用例
+│   │   ├── data/                    # Repo 实现
+│   │   └── model/                   # 领域对象
+│   ├── user/                        # Bounded Context 2
 │   │   └── ...
-│   └── shared/             # 跨域共享（谨慎放）
-│       ├── auth/           # 认证中间件
-│       ├── tracing/        # OTel setup
-│       ├── logging/        # slog 封装
-│       └── lerrors/        # 通用错误类型
+│   ├── billing/                     # Bounded Context 3
+│   │   └── ...
+│   └── pkg/                         # 跨 BC 共享（业务无关）
+│       ├── auth/                    # 认证中间件
+│       ├── log/                     # slog 封装
+│       ├── errs/                    # 通用错误类型
+│       ├── trace/                   # OTel setup
+│       └── conf/                    # 配置加载
 │
-├── pkg/                    # 对外公开的库（可选）
-│   └── client/             # 给外部用户的 SDK
+├── pkg/                             # 对外公开的库（可选，谨慎）
+│   └── client/                      # 给外部用户的 SDK
 │
-├── deploy/                 # 部署配置
+├── deploy/                          # 部署配置
 │   ├── docker-compose.yml
 │   ├── helm/
-│   │   ├── liaison/
-│   │   └── billing/
+│   │   ├── order-api/
+│   │   └── user-api/
 │   └── k8s/
 │
-├── db/                     # 数据库 migration（13-database-migration/）
+├── db/                              # 数据库 migration
 │   └── migrations/
 │
-├── scripts/                # 构建 / 工具脚本
+├── scripts/
 │   ├── proto-gen.sh
 │   └── lint.sh
 │
-├── tools/                  # 内部工具的源码（独立 module）
+├── tools/                           # 内部工具源码（独立 module）
 │   ├── codegen/
 │   └── mock-server/
 │
-├── docs/                   # 跨服务文档（spec/09 定义）
-│   ├── requirements/
-│   ├── adr/
-│   ├── design/
-│   ├── runbooks/
-│   ├── postmortems/
-│   ├── slo/
-│   └── security/
+├── docs/                            # 跨服务文档
+│   ├── requirements/  adr/  design/  runbooks/  postmortems/  slo/  security/
 │
-├── test/                   # 跨服务集成测试 / E2E
+├── test/                            # 跨服务集成测试 / E2E
 │   └── e2e/
 │
-├── third_party/            # 必须 vendor 的第三方代码
-│
-├── spec/                   # 项目规范（本目录）
+├── third_party/                     # 必须 vendor 的第三方代码
+├── spec/                            # 项目规范
 │
 ├── go.mod
 ├── go.sum
-├── go.work                 # 仅多 module 项目
+├── go.work                          # 仅多 module 项目
 ├── Makefile
-├── CODEOWNERS              # 或 .github/CODEOWNERS
+├── CODEOWNERS                       # 或 .github/CODEOWNERS
 ├── .github/
 │   └── workflows/
 ├── .golangci.yml
-├── .tool-versions          # asdf / mise 工具链锁定
+├── .tool-versions                   # asdf / mise 工具链锁定
 └── README.md
 ```
 
-## 关键目录规则
+### 关键目录规则
 
 | 目录 | 职责 | 谁可以 import |
 |------|------|--------------|
 | `api/` | Proto + 生成代码 | 所有 |
-| `cmd/<name>/` | 可执行入口 | 不被 import |
-| `internal/<domain>/` | 业务领域代码 | 仅本 domain + cmd |
-| `internal/shared/` | 跨域共享 | 任何 internal |
-| `pkg/` | 对外公开的库 | 任何项目（包括外部） |
+| `cmd/<service>/` | 可执行入口（装配） | 不被 import |
+| `internal/<bc>/` | Bounded Context 业务代码 | 仅本 BC + `cmd/` |
+| `internal/pkg/` | 跨 BC 共享（业务无关） | 任何 `internal/` |
+| `pkg/` | 对外公开 SDK | 任何项目（包括外部） |
 | `tools/` | 内部工具 | 不被业务代码 import |
-| `third_party/` | vendored 第三方 | 不被业务代码直接 import，封装后用 |
-
-**关键：**
-- `internal/` 是 Go 编译器原生强制的边界——`internal/foo/...` 只能被 `internal/foo/` 的兄弟和父级 import
-- `pkg/` 应该非常小心，里面的东西一旦发布就是 API 承诺
-- 大多数代码都应该在 `internal/` 而非 `pkg/`
+| `third_party/` | vendored 第三方 | 封装后用 |
 
 ---
 
-## Domain 边界
+## MVP 阶段可扁平化
+
+只有 1 个 BC 时**省掉** `internal/<bc>/` 这一层：
+
+```
+repo-root/
+├── api/v1/
+├── cmd/api/main.go
+├── internal/
+│   ├── server/  service/  biz/  data/  model/
+│   └── pkg/
+├── go.mod
+└── ...
+```
+
+**什么时候升级回 domain-first**：
+- 出现第二个稳定 BC（第二个领域独立出来）
+- 出现 worker / cli 等第二个 service 入口（需要拆共享代码）
+
+升级时把现有 `internal/{server,service,biz,data,model}` 挪进 `internal/<首个-bc>/`，其他 BC 新建目录即可。
+
+---
+
+## BC 边界（硬规则）
 
 ### 红线
 
-`internal/billing/` **禁止** import `internal/liaison/`，反之亦然。
+`internal/order/` **禁止** import `internal/user/`，反之亦然。
 
 ```go
-// ❌ 跨 domain 直接 import
+// ❌ 跨 BC 直接 import
 package billing
 
-import "github.com/org/repo/internal/liaison/model"  // 禁止
+import "github.com/org/repo/internal/order/model"  // 禁止
 ```
 
 ### 强制方式
 
 1. **Code Review**：CODEOWNERS 强制双 owner review
-2. **Linter**：用 `import-boundaries` / `go-arch-lint` / 自定义脚本检查
+2. **Linter**：`go-arch-lint` / `import-boundaries` / 自定义脚本
 3. **CI 阻断**：linter 失败阻断 PR
 
 ```yaml
-# .go-arch-lint.yml 示例
+# .go-arch-lint.yml
 version: 3
 workdir: .
-allow:
-  depOnAnyVendor: true
 components:
-  liaison:
-    in: internal/liaison/**
-  billing:
-    in: internal/billing/**
-  shared:
-    in: internal/shared/**
+  order:    { in: internal/order/** }
+  user:     { in: internal/user/** }
+  billing:  { in: internal/billing/** }
+  pkg:      { in: internal/pkg/** }
 deps:
-  liaison:
-    mayDependOn: [shared]
-  billing:
-    mayDependOn: [shared]
-  shared:
-    mayDependOn: []  # shared 不依赖任何 domain
+  order:    { mayDependOn: [pkg] }
+  user:     { mayDependOn: [pkg] }
+  billing:  { mayDependOn: [pkg] }
+  pkg:      { mayDependOn: [] }       # pkg 不依赖任何 BC
 ```
 
-### 跨 domain 协作的正确方式
+### 跨 BC 协作的正确方式
 
 | 方式 | 何时用 |
 |------|------|
 | 通过 API（gRPC / HTTP 内部调用） | 强一致或同步交互 |
 | 通过事件（消息队列 / Outbox） | 最终一致或异步通知 |
-| 把共享部分提到 `internal/shared/` | 业务无关的横切关注点 |
+| 把共享部分提到 `internal/pkg/` | **业务无关**的横切关注点 |
 
 ❌ **永远不要**：直接 import 对方的 model / repo / service。
+
+**`cmd/<service>/main.go` 是唯一特权**：装配层可以同时 import 多个 BC 的构造函数来做依赖注入——这正是 BFF / 网关能存在的原因。
 
 ---
 
 ## Module 策略
 
-### 选项 A：单 go.mod（推荐起步）
+### 选项 A：单 go.mod（**默认推荐**）
 
 ```
 repo-root/
@@ -186,72 +259,29 @@ repo-root/
 └── ...
 ```
 
-**优点：**
-- 简单：所有 import 用 `github.com/org/repo/...`
-- 升级依赖一次到位
-- 跨 domain refactor 容易
-- IDE / 工具链零配置
+**优点**：所有 import 用 `github.com/org/repo/...`，依赖一次到位，跨 BC refactor 容易，IDE / 工具链零配置。
 
-**缺点：**
-- 服务越多，编译图越大
-- 一个依赖升级影响所有服务
-
-**适合：**
-- < 100 个服务
-- 团队 < 50 人
-- 服务发布节奏可对齐
+**适合**：< 100 个服务、团队 < 50 人、服务发布节奏可对齐。
 
 ### 选项 B：多 go.mod + go.work（按需）
 
 ```
 repo-root/
-├── go.work         # 工作区
-├── go.mod          # 主 module
-├── tools/codegen/
-│   └── go.mod      # 独立 module
-└── pkg/client/
-    └── go.mod      # 独立 module（对外发版）
+├── go.work
+├── go.mod
+├── tools/codegen/go.mod      # 独立 module（工具链）
+└── pkg/client/go.mod         # 独立 module（对外发版）
 ```
 
-```go
-// go.work
-go 1.24
+**何时用**：有对外发布的库（`pkg/client`）需要独立版本号；`tools/` 要用激进依赖不影响主业务。
 
-use (
-    .
-    ./tools/codegen
-    ./pkg/client
-)
-```
-
-**优点：**
-- 库可独立版本号发布
-- 工具链与主业务隔离（codegen 可以用更激进的依赖）
-- 服务发布节奏可独立
-
-**缺点：**
-- 复杂：每个 module 一份 go.sum
-- 跨 module refactor 难
-- IDE 配置成本高
-
-**适合：**
-- 有对外发布的库（pkg/client）
-- 服务发布节奏完全独立
-- 工具链需要独立依赖
-
-### 推荐策略
-
-**默认单 go.mod**。只在以下情况下拆 module：
-- `pkg/client` 等需要独立版本号的对外库
-- `tools/` 下的工具想用激进依赖（不影响主业务）
-
-**禁止：**
-- 一个服务一个 go.mod（除非有强理由）
-- 混用 vendor 和 module（选一种）
+**禁止**：每个服务一个 go.mod（徒增复杂度）；混用 vendor 和 module。
 
 ---
 
 ## CODEOWNERS
+
+每个 BC 一个 owner 团队：
 
 ```
 # .github/CODEOWNERS
@@ -262,33 +292,30 @@ use (
 # API 变更需要 API 委员会
 /api/                   @api-committee @platform-team
 
-# 各业务领域
-/internal/liaison/      @liaison-team
+# 各 Bounded Context
+/internal/order/        @order-team
+/internal/user/         @user-team
 /internal/billing/      @billing-team
-/internal/shared/       @platform-team
-/internal/shared/auth/  @security-team
+
+# 跨 BC 共享
+/internal/pkg/          @platform-team
+/internal/pkg/auth/     @security-team
 
 # 数据库
 /db/migrations/         @dba-team @platform-team
 
-# 部署相关
+# 部署 / CI
 /deploy/                @sre-team
 /.github/               @platform-team
 
-# 安全相关
+# 安全
 /spec/11-security/      @security-team
-/scripts/security/      @security-team
-
-# 文档
-/docs/                  @platform-team
-/spec/                  @platform-team
 ```
 
 **规则：**
 - 每个目录都应被 CODEOWNERS 覆盖（兜底用 `*`）
-- 跨 domain PR 自动要求多 owner review
-- 安全 / API / DB 变更必须有专门 owner
-- main 分支启用"required reviewers from CODEOWNERS"（`08-delivery/cicd.md` 的 branch protection）
+- 跨 BC PR 自动要求多 owner review
+- main 分支启用"required reviewers from CODEOWNERS"
 
 ---
 
@@ -302,15 +329,16 @@ use (
 on:
   pull_request:
     paths:
-      - 'internal/liaison/**'
-      - 'cmd/manager/**'
-      - 'api/v1/liaison.proto'
+      - 'internal/order/**'
+      - 'cmd/order-api/**'
+      - 'cmd/order-worker/**'
+      - 'api/order/**'
       - 'go.mod'
 
 jobs:
-  test-liaison:
+  test-order:
     steps:
-      - run: go test ./internal/liaison/... ./cmd/manager/...
+      - run: go test ./internal/order/... ./cmd/order-api/... ./cmd/order-worker/...
 ```
 
 ### 方式 2：基于 git diff 的脚本
@@ -324,9 +352,7 @@ go test $affected_pkgs -race
 
 ### 方式 3：构建系统
 
-- **Bazel**：原生支持 affected
-- **Buck2 / Pants**：同上
-- **Mage / Task**：用脚本封装
+Bazel / Buck2 / Pants 原生支持 affected。
 
 ### 必须缓存的资产
 
@@ -339,7 +365,7 @@ go test $affected_pkgs -race
 - uses: actions/setup-go@v5
   with:
     go-version: '1.24'
-    cache: true   # 自动缓存 go-build 和 mod cache
+    cache: true
 ```
 
 ---
@@ -353,7 +379,7 @@ go test $affected_pkgs -race
 ```bash
 git tag v1.2.3
 git push origin v1.2.3
-# CI 构建 manager:v1.2.3、worker:v1.2.3、cli:v1.2.3
+# CI 构建 order-api:v1.2.3、order-worker:v1.2.3、user-api:v1.2.3
 ```
 
 **优点**：原子、简单、易追溯。
@@ -361,13 +387,11 @@ git push origin v1.2.3
 ### 独立版本（按服务）
 
 ```bash
-git tag liaison/v1.2.3
-git tag billing/v0.5.1
+git tag order-api/v1.2.3
+git tag user-api/v0.5.1
 ```
 
-需要 release pipeline 区分 tag prefix，按 prefix 构建对应 cmd。
-
-**何时用**：服务的发布节奏完全不同（罕见）。
+需要 release pipeline 区分 tag prefix，按 prefix 构建对应 cmd。**何时用**：服务发布节奏完全不同（罕见）。
 
 ---
 
@@ -424,7 +448,6 @@ help:
 ### Module proxy
 
 ```
-# 公司内推荐自建 proxy + checksum
 GOPROXY=https://goproxy.example.com,https://proxy.golang.org,direct
 GOSUMDB=sum.golang.org
 GOPRIVATE=github.com/your-org/*
@@ -432,59 +455,73 @@ GOPRIVATE=github.com/your-org/*
 
 ---
 
-## 加新服务的标准流程
+## 新增 BC / 新增 service 的标准流程
+
+### 新增一个 Bounded Context
 
 ```
-1. 在 internal/ 下创建新 domain：
-   internal/newservice/
-   ├── controlplane/
-   ├── repo/
-   ├── model/
-   └── web/
+1. 在 internal/ 下创建新 BC：
+   internal/<new-bc>/
+   ├── server/  service/  biz/  data/  model/
 
-2. 在 cmd/ 下创建入口：
-   cmd/newservice/main.go
+2. 在 api/ 下定义 proto：
+   api/<new-bc>/v1/<new-bc>.proto
 
-3. 在 api/v1/ 下定义 proto：
-   api/v1/newservice.proto
+3. 更新 CODEOWNERS：
+   /internal/<new-bc>/   @<new-bc>-team
+   /api/<new-bc>/        @<new-bc>-team
 
-4. 更新 CODEOWNERS：
-   /internal/newservice/  @newservice-team
+4. 写 ADR 说明 BC 拆分理由（02-architecture/architecture-decision-record.md）
+```
 
-5. 更新 deploy/：
-   deploy/helm/newservice/
+### 新增一个 service（复用已有 BC）
 
-6. 更新 Makefile：
-   build-newservice:
-       go build -o bin/newservice ./cmd/newservice
+```
+1. 在 cmd/ 下创建入口：
+   cmd/<bc>-<role>/main.go    # 命名：<bc>-api / <bc>-worker / <bc>-cli / <bc>-cron
 
-7. 走"新服务上线 Checklist"（`high-level-design.md`）
+2. 更新 deploy/：
+   deploy/helm/<bc>-<role>/
+
+3. 更新 Makefile：
+   build-<bc>-<role>:
+       go build -o bin/<bc>-<role> ./cmd/<bc>-<role>
+
+4. 走"新服务上线 Checklist"（high-level-design.md）
 ```
 
 ---
 
 ## 反模式
 
-- ❌ 把所有代码都放 `pkg/`（pkg 是对外的，绝大多数代码应在 `internal/`）
-- ❌ 跨 domain 直接 import（必须通过 API / 事件 / shared）
-- ❌ 一个 `cmd/main.go` 包含所有服务（每个服务独立 `cmd/<name>/`）
-- ❌ 共享数据库（每个服务的数据自己拥有，不直接读对方表）
+- ❌ `internal/<bc>/` 跨 BC 直接 import（必须通过 API / 事件 / `internal/pkg/`）
+- ❌ 把 `<bc>` 切到"整个业务"那么大（`internal/ecommerce/`——等于没切）
+- ❌ 把 `<bc>` 切到"一个功能"那么小（`internal/user_login/`——这是 biz 里的 method）
+- ❌ 把所有代码都放 `pkg/`（`pkg/` 是对外的，绝大多数代码应在 `internal/`）
+- ❌ `internal/pkg/` 变成大杂烩（只放**业务无关**的横切关注点）
+- ❌ 一个 `cmd/main.go` 包含所有服务（每个服务独立 `cmd/<service>/`）
+- ❌ `cmd/<service>/main.go` 里写业务逻辑（只做 wiring + signal）
+- ❌ 共享数据库（每个 BC 拥有自己的表，不直接读对方表）
 - ❌ 没有 CODEOWNERS（merge review 没强制 owner）
 - ❌ 改一行触发全量 CI（必须做 affected detection）
-- ❌ `internal/shared/` 变成大杂烩（业务无关、接口稳定的才能进）
-- ❌ 一个服务一个 go.mod（除非有强理由，徒增复杂度）
-- ❌ 服务直接读其他服务的 Redis / DB（违反边界）
+- ❌ 一个服务一个 go.mod（除非有强理由）
+- ❌ 服务直接读其他 BC 的 Redis / DB（违反边界）
 - ❌ 工具版本不锁定（CI 与本地不一致）
 
 ## 自查
 
-- [ ] 目录布局符合 `cmd / internal / pkg / api / deploy / docs / spec` 标准
-- [ ] `internal/<domain>/` 之间无直接 import（linter 验证）
+- [ ] 顶层布局符合 `api / cmd / internal / pkg / deploy / db / docs / spec` 标准
+- [ ] `cmd/` 按 **service** 切，命名 `<bc>-<role>`
+- [ ] `internal/` 按 **Bounded Context** 切
+- [ ] 每个 BC 粒度合理（5k~30k LOC，独立团队可拥有，有自己的数据）
+- [ ] 每个 BC 下有完整 `server/service/biz/data/model`
+- [ ] `internal/<bc-A>/` 之间无直接 import（linter 验证）
+- [ ] `internal/pkg/` 只放业务无关的横切关注点
 - [ ] go.mod 策略已确定（默认单一）
-- [ ] CODEOWNERS 全覆盖，关键目录有专门 owner
+- [ ] CODEOWNERS 全覆盖，每个 BC 有专门 owner
 - [ ] CI 有 affected detection 或 path 过滤
 - [ ] 工具版本锁定（`.tool-versions` 或类似）
 - [ ] Makefile 提供统一入口（`make help` 列出全部）
 - [ ] 第三方依赖策略一致（vendor 与否选定）
-- [ ] 加新服务有标准流程文档
-- [ ] 跨 domain 协作走 API / 事件，不直接 import
+- [ ] 加新 BC / 新 service 有标准流程文档
+- [ ] 跨 BC 协作走 API / 事件，不直接 import

@@ -67,9 +67,9 @@ docs/
 | 类型 | 格式 | 示例 |
 |------|------|------|
 | Epic | `EPIC-<三位序号>-<简述>` | `EPIC-001-billing-platform` |
-| PRD | `PRD-<三位序号>-<简述>` | `PRD-001-iam-email-verification` |
+| PRD | `PRD-<三位序号>-<简述>` | `PRD-001-user-email-verification` |
 | RFC | `RFC-<三位序号>-<简述>` | `RFC-001-migrate-to-slog` |
-| ADR | `ADR-<三位序号>-<简述>` | `ADR-001-casdoor-auth` |
+| ADR | `ADR-<三位序号>-<简述>` | `ADR-001-use-kratos-over-gin` |
 | HLD | `HLD-<三位序号>-<简述>` | `HLD-001-billing-system` |
 
 ---

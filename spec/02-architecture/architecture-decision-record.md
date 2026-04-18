@@ -22,7 +22,7 @@
 
 ## 编号与归档
 
-- **编号**：`ADR-<三位序号>-<简述>` 如 `ADR-001-casdoor-auth`
+- **编号**：`ADR-<三位序号>-<简述>` 如 `ADR-001-use-kratos-over-gin`
 - **路径**：`docs/adr/ADR-XXX-<简述>.md`
 - **模板**：`docs/templates/architecture-decision-record-template.md`
 

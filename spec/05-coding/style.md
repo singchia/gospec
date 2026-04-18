@@ -18,9 +18,9 @@ import (
     "gorm.io/gorm"
 
     // 3. 项目内部包（空行分隔）
-    v1 "github.com/singchia/liaison-cloud/api/v1"
-    "github.com/singchia/liaison-cloud/pkg/liaison/config"
-    "github.com/singchia/liaison-cloud/pkg/liaison/repo/model"
+    v1 "github.com/your-org/your-repo/api/order/v1"
+    "github.com/your-org/your-repo/internal/order/model"
+    "github.com/your-org/your-repo/internal/pkg/conf"
 )
 ```
 
@@ -39,13 +39,13 @@ import (
 
 ```go
 // ✅ 公开函数：从函数名开始
-// NewLiaison 初始化 Liaison 服务，读取配置、初始化各组件并返回服务实例。
-// 如果返回 ErrInvalidUsage，调用方不应记录错误（属于正常退出场景）。
-func NewLiaison() (*Liaison, error) { ... }
+// NewOrderUsecase 构造订单业务用例，依赖通过参数注入。
+// 返回的 usecase 在并发访问下是安全的。
+func NewOrderUsecase(repo OrderRepo, log Logger) *OrderUsecase { ... }
 
 // ✅ 公开类型
-// Repo 聚合所有数据访问方法，业务层只依赖此接口。
-type Repo interface { ... }
+// OrderRepo 定义订单数据访问契约，业务层只依赖此接口。
+type OrderRepo interface { ... }
 ```
 
 **规则：**
@@ -84,13 +84,13 @@ i := 0 // 初始化 i 为 0
 
 ```go
 // ✅ 推荐顺序：依赖 → 配置 → 状态 → 锁
-type IAMService struct {
+type UserUsecase struct {
     // 依赖
-    repo    Repo
-    casdoor *casdoorClient
+    repo    UserRepo
+    authSvc AuthService
 
     // 配置
-    conf *config.Configuration
+    conf *conf.Config
 
     // 内部状态
     codes map[string]emailCodeRecord
@@ -124,12 +124,12 @@ type Good struct {
 
 ```go
 // ✅ 私有字段 + 通过接口暴露
-type iamService struct {
-    repo Repo
+type userUsecase struct {
+    repo UserRepo
 }
 
-func NewIAMService(repo Repo) IAMService {
-    return &iamService{repo: repo}
+func NewUserUsecase(repo UserRepo) UserUsecase {
+    return &userUsecase{repo: repo}
 }
 ```
 

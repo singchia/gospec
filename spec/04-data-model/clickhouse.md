@@ -33,14 +33,14 @@
 ### 命名模板
 
 ```sql
-CREATE TABLE liaison.events_local ON CLUSTER '{cluster}'
+CREATE TABLE foo.events_local ON CLUSTER '{cluster}'
 (
     event_time   DateTime64(3, 'UTC'),
     event_date   Date DEFAULT toDate(event_time),
     tenant_id    UInt64,
     user_id      UInt64,
     event_type   LowCardinality(String),
-    edge_id      UInt64,
+    order_id     UInt64,
     duration_ms  UInt32,
     metadata     String CODEC(ZSTD(3))
 )
@@ -54,8 +54,8 @@ SETTINGS index_granularity = 8192;
 **分布式视图**（如果分片）：
 
 ```sql
-CREATE TABLE liaison.events ON CLUSTER '{cluster}' AS liaison.events_local
-ENGINE = Distributed('{cluster}', liaison, events_local, rand());
+CREATE TABLE foo.events ON CLUSTER '{cluster}' AS foo.events_local
+ENGINE = Distributed('{cluster}', foo, events_local, rand());
 ```
 
 ## 设计原则
@@ -119,7 +119,7 @@ batch := make([]Event, 0, 50000)
 for evt := range eventCh {
     batch = append(batch, evt)
     if len(batch) >= 50000 {
-        chConn.AsyncInsert(ctx, "INSERT INTO liaison.events_local VALUES", false, batch...)
+        chConn.AsyncInsert(ctx, "INSERT INTO foo.events_local VALUES", false, batch...)
         batch = batch[:0]
     }
 }
@@ -131,8 +131,8 @@ for evt := range eventCh {
 
 ```sql
 -- Buffer 表自动批量
-CREATE TABLE liaison.events_buffer AS liaison.events_local
-ENGINE = Buffer('liaison', 'events_local', 16, 10, 60, 10000, 100000, 10000000, 100000000);
+CREATE TABLE foo.events_buffer AS foo.events_local
+ENGINE = Buffer('foo', 'events_local', 16, 10, 60, 10000, 100000, 10000000, 100000000);
 ```
 
 ### 禁止事项
@@ -204,7 +204,7 @@ GROUP BY event_type;
 预聚合明细 → 加速查询。
 
 ```sql
-CREATE MATERIALIZED VIEW liaison.events_5min_mv
+CREATE MATERIALIZED VIEW foo.events_5min_mv
 ENGINE = SummingMergeTree
 PARTITION BY toYYYYMM(t)
 ORDER BY (tenant_id, event_type, t)
@@ -214,7 +214,7 @@ AS SELECT
     event_type,
     count() AS cnt,
     sum(duration_ms) AS total_duration
-FROM liaison.events_local
+FROM foo.events_local
 GROUP BY t, tenant_id, event_type;
 ```
 

@@ -16,15 +16,15 @@
 // ✅ 推荐
 logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-logger.InfoContext(ctx, "edge created",
+logger.InfoContext(ctx, "order created",
     slog.String("trace_id", traceIDFromCtx(ctx)),
     slog.Int64("user_id", user.ID),
-    slog.Int64("edge_id", edge.ID),
+    slog.Int64("order_id", order.ID),
     slog.Duration("cost", time.Since(start)),
 )
 
 // ❌ 禁止：拼接字符串
-log.Printf("user %d created edge %d in %v", user.ID, edge.ID, cost)
+log.Printf("user %d created order %d in %v", user.ID, order.ID, cost)
 ```
 
 ## 日志级别使用边界
@@ -50,12 +50,12 @@ log.Printf("user %d created edge %d in %v", user.ID, edge.ID, cost)
 {
   "time": "2026-04-14T10:30:45.123Z",
   "level": "INFO",
-  "msg": "edge created",
-  "service": "liaison-manager",
+  "msg": "order created",
+  "service": "order-api",
   "version": "v1.2.3",
   "trace_id": "abc123...",
   "span_id": "def456...",
-  "caller": "controlplane/edge.go:45"
+  "caller": "biz/order.go:45"
 }
 ```
 

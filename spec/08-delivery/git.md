@@ -29,20 +29,20 @@
 
 ### Scope
 
-`iam`、`billing`、`edge`、`entry`、`proxy`、`device`、`application`、`dao`、`config`、`deps`、`ci`、`deploy`、`proto`、`ops`
+每个 Bounded Context 一个 scope（如 `user`、`order`、`billing`），外加通用 scope：`api`（proto/API 变更）、`data`（数据层）、`config`、`deps`、`ci`、`deploy`、`ops`。
 
 ### 示例
 
 ```
-feat(iam): 添加邮箱验证码注册功能
-fix(dao): 修复并发事务 race condition
-refactor(billing): 将订单查询逻辑提取到独立方法
-test(iam): 添加登录频率限制单元测试
+feat(user): 添加邮箱验证码注册功能
+fix(data): 修复并发事务 race condition
+refactor(order): 将订单查询逻辑提取到独立 usecase
+test(user): 添加登录频率限制单元测试
 chore(deps): 升级 go-kratos/kratos 至 v2.7.2
-perf(dao): 为 edges 表 user_id 字段添加索引
+perf(data): 为 orders 表 user_id 字段添加索引
 ci: 添加 Go 1.24 构建矩阵
 docs(api): 更新 Swagger 接口文档
-build(docker): 优化 liaison Dockerfile 多阶段构建
+build(docker): 优化 order-api Dockerfile 多阶段构建
 ```
 
 ### 提交规则
@@ -58,10 +58,10 @@ build(docker): 优化 liaison Dockerfile 多阶段构建
 
 | 场景 | 格式 | 示例 |
 |------|------|------|
-| 新功能 | `feature/<scope>-<desc>` | `feature/iam-email-verification` |
-| Bug 修复 | `fix/<scope>-<desc>` | `fix/dao-concurrent-transaction` |
+| 新功能 | `feature/<scope>-<desc>` | `feature/user-email-verification` |
+| Bug 修复 | `fix/<scope>-<desc>` | `fix/data-concurrent-transaction` |
 | 紧急修复 | `hotfix/<desc>` | `hotfix/login-panic` |
-| 重构 | `refactor/<desc>` | `refactor/controlplane-split` |
+| 重构 | `refactor/<desc>` | `refactor/order-biz-split` |
 | 文档 | `docs/<desc>` | `docs/api-swagger` |
 | 依赖/工具 | `chore/<desc>` | `chore/upgrade-kratos` |
 
@@ -138,20 +138,20 @@ deploy/**/.env
 ## 本地开发环境
 
 ```bash
-# 启动依赖服务
-cd deploy && docker-compose up -d mysql casdoor nginx
+# 启动依赖服务（具体服务按项目实际依赖调整）
+cd deploy && docker-compose up -d
 
 # 复制环境配置
-cp deploy/liaison/.env.example deploy/liaison/.env
+cp deploy/.env.example deploy/.env
 
 # 运行服务
-go run cmd/manager/main.go
+go run ./cmd/order-api
 
 # 常用命令
 go build ./...
 go test ./... -race -timeout 120s
 go vet ./...
-swag init -g cmd/manager/main.go -o docs/swagger/
+swag init -g cmd/order-api/main.go -o docs/swagger/
 ```
 
 ## 自查

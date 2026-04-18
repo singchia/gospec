@@ -19,21 +19,23 @@
 
 它不是一份规范文档，而是一个**可被 AI Agent 按需加载的知识库**：Agent 拿到任务后先读路由表，只加载当前任务相关的 1-3 个子文件，不会一次性吞掉整个规范。
 
-## 技术栈基线
+## 技术栈基线（参考，可替换）
 
-| 领域 | 选型 |
-|------|------|
-| 语言 | Go 1.21+ |
-| Web 框架 | go-kratos/kratos v2 |
-| API 协议 | Protocol Buffers v3 + gRPC + HTTP/REST |
-| ORM | gorm.io/gorm |
-| 存储 | MySQL / Redis / ClickHouse / InfluxDB |
-| 日志 | `log/slog`（推荐）/ zap |
-| 指标 | Prometheus client_golang |
-| 追踪 | OpenTelemetry |
-| 认证 | Casdoor + JWT |
-| 测试 | testing + testify + testcontainers-go |
-| CI/CD | GitHub Actions + golangci-lint + govulncheck + trivy + cosign |
+规范只约束分层、依赖方向、错误处理、测试、安全等通用项，**不锁框架**。下表只是参考选型。
+
+| 领域 | 参考选型 | 常见替换 |
+|------|---------|---------|
+| 语言 | Go 1.21+ | — |
+| Web 框架 | Kratos v2 | gin / CloudWeGo Hertz / chi / echo / 原生 net/http |
+| API 协议 | Protobuf v3 + gRPC + HTTP/REST | OpenAPI + REST |
+| ORM | gorm.io/gorm | sqlx / ent / sqlc |
+| 存储 | MySQL / Redis / ClickHouse / InfluxDB | 按业务需要选择 |
+| 日志 | `log/slog`（推荐） | zap |
+| 指标 | Prometheus client_golang | OpenTelemetry metrics |
+| 追踪 | OpenTelemetry | — |
+| 认证 | JWT（golang-jwt/jwt v5） | Auth0 / Keycloak / Casdoor / 自研 |
+| 测试 | testing + testify + testcontainers-go | — |
+| CI/CD | GitHub Actions + golangci-lint + govulncheck + trivy + cosign | GitLab CI / Drone / Buildkite |
 
 详细选型和约束见 `spec/05-coding/README.md`。
 
@@ -120,7 +122,7 @@ Agent 不会一次性读完所有规范。`spec/spec.md` 里有一张"任务 →
 
 ### 3. 单服务 + Monorepo 双层架构
 
-`02-architecture/` 既讲单服务内部的严格分层（`cmd → web → controlplane → repo → model`），也讲 monorepo 仓库结构（`cmd/ internal/ pkg/ api/`）、module 策略（单 go.mod vs go.work）、domain 边界、CODEOWNERS、CI affected detection。
+`02-architecture/` 既讲单服务内部的严格分层（Kratos 风格：`cmd → server → service → biz → data → model`，框架中性），也讲 monorepo 仓库结构：**`cmd/` 按 service 切、`internal/` 按 Bounded Context 切**，配合 module 策略（单 `go.mod` vs `go.work`）、BC 边界（linter 强制）、CODEOWNERS、CI affected detection。
 
 ### 4. 设计模式库
 

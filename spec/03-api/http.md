@@ -6,16 +6,16 @@
 
 | 操作 | 方法 | 路径示例 |
 |------|------|---------|
-| 创建 | POST | `/api/v1/edges` |
-| 查询单个 | GET | `/api/v1/edges/{id}` |
-| 列表查询 | GET | `/api/v1/edges` |
-| 更新 | PUT | `/api/v1/edges/{id}` |
-| 部分更新 | PATCH | `/api/v1/edges/{id}` |
-| 删除 | DELETE | `/api/v1/edges/{id}` |
-| 子资源操作 | POST | `/api/v1/edges/{edge_id}/scan_application_tasks` |
+| 创建 | POST | `/api/v1/orders` |
+| 查询单个 | GET | `/api/v1/orders/{id}` |
+| 列表查询 | GET | `/api/v1/orders` |
+| 更新 | PUT | `/api/v1/orders/{id}` |
+| 部分更新 | PATCH | `/api/v1/orders/{id}` |
+| 删除 | DELETE | `/api/v1/orders/{id}` |
+| 子资源操作 | POST | `/api/v1/orders/{order_id}/refund_requests` |
 
 **规则：**
-- 资源名**复数形式**：`/edges`、`/devices`
+- 资源名**复数形式**：`/orders`、`/users`
 - 子资源用嵌套路径
 - 版本前缀：`/api/v1/`
 - 多词资源用连字符或下划线，项目内一致
@@ -56,18 +56,31 @@ return &v1.LoginResponse{
 
 ## 错误映射
 
+在 Handler（`service/`）层把 `biz/` 抛出的领域错误转换为 HTTP 状态码 + 业务错误码。具体 API 依框架不同：
+
 ```go
+// Kratos 风格：kratoserrors.New(code, reason, message)
 import kratoserrors "github.com/go-kratos/kratos/v2/errors"
 
-if errors.Is(err, iam.ErrLoginRateLimited()) {
+if errors.Is(err, biz.ErrLoginRateLimited) {
     return nil, kratoserrors.New(429, "LOGIN_RATE_LIMITED", "尝试过于频繁，请稍后再试")
 }
-if errors.Is(err, iam.ErrInvalidCredentials()) {
+if errors.Is(err, biz.ErrInvalidCredentials) {
     return nil, kratoserrors.New(401, "LOGIN_CREDENTIALS_INVALID", "账号或密码错误")
 }
-// 其他错误透传（框架处理为 500）
-return nil, err
+return nil, err   // 其他错误透传，框架处理为 500
 ```
+
+```go
+// gin 风格
+if errors.Is(err, biz.ErrLoginRateLimited) {
+    c.JSON(http.StatusTooManyRequests, Response{Code: 429, Message: "尝试过于频繁，请稍后再试"})
+    return
+}
+// ...
+```
+
+**不同框架的 API 不同，但分层约束一致**：错误映射只在 `service/` 层做，`biz/` 只抛领域错误。
 
 **规则：**
 - 业务错误码全大写 + 下划线
@@ -83,11 +96,11 @@ return nil, err
 
 ```go
 // ✅ 推荐：复杂 HTTP 处理单独文件
-srv.HandleFunc("/api/v1/iam/signup", web.handleSignupHTTP)
-srv.HandleFunc("/api/v1/iam/avatar_upload", web.handleUploadAvatarHTTP)
+srv.HandleFunc("/api/v1/users/signup", s.handleSignupHTTP)
+srv.HandleFunc("/api/v1/users/avatar_upload", s.handleUploadAvatarHTTP)
 ```
 
-文件命名：`<domain>_<action>_http.go`，如 `iam_signup_http.go`。
+文件命名：`<resource>_<action>_http.go`，如 `user_signup_http.go`。
 
 **仍然必须：**
 - 写 Swagger 注释（详见 `middleware.md`）
@@ -100,27 +113,26 @@ srv.HandleFunc("/api/v1/iam/avatar_upload", web.handleUploadAvatarHTTP)
 ## 客户端 IP 获取
 
 ```go
-// ✅ 推荐：依次检查代理头，兼容反向代理场景
-func getClientIP(ctx context.Context) string {
-    if httpReq, ok := kratoshttp.RequestFromServerContext(ctx); ok {
-        // 1. X-Forwarded-For（多级代理取第一个）
-        if forwarded := httpReq.Header.Get("X-Forwarded-For"); forwarded != "" {
-            ips := strings.Split(forwarded, ",")
-            if ip := strings.TrimSpace(ips[0]); ip != "" {
-                return ip
-            }
+// ✅ 推荐：依次检查代理头，兼容反向代理场景（以 *http.Request 为输入，框架中性）
+func getClientIP(r *http.Request) string {
+    // 1. X-Forwarded-For（多级代理取第一个）
+    if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+        ips := strings.Split(forwarded, ",")
+        if ip := strings.TrimSpace(ips[0]); ip != "" {
+            return ip
         }
-        // 2. X-Real-IP
-        if realIP := httpReq.Header.Get("X-Real-IP"); realIP != "" {
-            return realIP
-        }
-        // 3. RemoteAddr
-        ip, _, _ := net.SplitHostPort(httpReq.RemoteAddr)
-        return ip
     }
-    return ""
+    // 2. X-Real-IP
+    if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+        return realIP
+    }
+    // 3. RemoteAddr
+    ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+    return ip
 }
 ```
+
+Kratos / gin / hertz 都提供从 context 或 ctx 取出 `*http.Request` 的辅助函数，按框架文档调用即可。
 
 **安全提醒**：`X-Forwarded-For` 可被客户端伪造。仅在反向代理后可信，且代理必须重写头。
 

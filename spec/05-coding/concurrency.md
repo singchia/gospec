@@ -112,19 +112,19 @@ val := atomic.LoadInt64(&counter)
 
 ```go
 // ✅ context 是函数第一个参数
-func (s *Service) CreateEdge(ctx context.Context, req *Request) (*Response, error)
+func (uc *OrderUsecase) CreateOrder(ctx context.Context, in *Input) (*Order, error)
 
 // ✅ 入口生成 context，下游传递
 func main() {
     ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
     defer cancel()
-    server.Run(ctx)
+    app.Run(ctx)
 }
 
 // ✅ 设置超时
 ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 defer cancel()
-return s.dao.Query(ctx, sql)
+return uc.repo.Query(ctx, sql)
 ```
 
 ### context 红线

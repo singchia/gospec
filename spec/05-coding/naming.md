@@ -6,14 +6,14 @@
 
 | 类型 | 规则 | 示例 |
 |------|------|------|
-| 包名 | 小写单词，无下划线，简短 | `iam`、`controlplane`、`frontierbound` |
-| 文件名 | 小写，下划线分隔 | `dao_user.go`、`model_edge.go` |
-| 接口 | PascalCase，名词或形容词+er | `Repo`、`ControlPlane`、`Reader` |
-| 结构体 | PascalCase（公开）/ camelCase（私有） | `IAMService`、`web`、`dao` |
-| 函数 / 方法 | PascalCase（公开）/ camelCase（私有） | `NewLiaison`、`getDB` |
-| 常量 | PascalCase 或 ALL_CAPS（仅全局配置常量） | `ErrInvalidUsage`、`MaxConnections` |
-| 变量 | camelCase，语义清晰 | `loginIP`、`casdoorID`、`txDao` |
-| 错误变量 | `Err` 前缀 | `ErrPortConflict`、`ErrInvalidUsage` |
+| 包名 | 小写单词，无下划线，简短 | `user`、`order`、`biz`、`data` |
+| 文件名 | 小写，下划线分隔 | `user.go`、`order_repo.go`、`user_test.go` |
+| 接口 | PascalCase，名词或形容词+er | `OrderRepo`、`Reader`、`Closer` |
+| 结构体 | PascalCase（公开）/ camelCase（私有） | `UserUsecase`、`orderRepo` |
+| 函数 / 方法 | PascalCase（公开）/ camelCase（私有） | `NewOrderUsecase`、`getDB` |
+| 常量 | PascalCase 或 ALL_CAPS（仅全局配置常量） | `ErrNotFound`、`MaxConnections` |
+| 变量 | camelCase，语义清晰 | `loginIP`、`tenantID`、`txDao` |
+| 错误变量 | `Err` 前缀 | `ErrOrderNotFound`、`ErrInvalidInput` |
 
 ## 包名规则
 
@@ -24,8 +24,9 @@
 
 ```go
 // ✅ 包名隐含语义
-package iam       // 身份认证
-package edge      // edge 业务
+package user      // 用户领域
+package order     // 订单领域
+package biz       // 业务用例层
 
 // ❌
 package utils     // 啥都装的杂货铺
@@ -40,13 +41,13 @@ package common    // 同上
 
 ```go
 // ✅
-type EdgeRepo interface {
-    Get(ctx context.Context, id int64) (*Edge, error)
-    List(ctx context.Context, page, size int) ([]*Edge, error)
+type OrderRepo interface {
+    Get(ctx context.Context, id int64) (*Order, error)
+    List(ctx context.Context, page, size int) ([]*Order, error)
 }
 
 // ❌
-type IEdgeRepo interface { ... }
+type IOrderRepo interface { ... }
 ```
 
 ## 函数命名
@@ -84,7 +85,7 @@ var noTimeout = false    // 双重否定，难懂
 ```go
 // ✅
 var ErrNotFound = errors.New("not found")
-return fmt.Errorf("create edge: %w", err)
+return fmt.Errorf("create order: %w", err)
 
 // ❌
 var ErrNotFound = errors.New("Not found.")  // 大写开头 + 句号

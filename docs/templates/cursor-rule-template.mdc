@@ -14,8 +14,8 @@ alwaysApply: false
 
 | 任务 | 最少必读 |
 |------|---------|
-| 写 HTTP / gRPC handler | `spec/03-api/proto.md` + `spec/03-api/http.md` + `spec/05-coding/errors.md` |
-| 写业务逻辑 / Service | `spec/02-architecture/layering.md` + `spec/05-coding/errors.md` |
+| 写 HTTP / gRPC handler（`service/`） | `spec/03-api/proto.md` + `spec/03-api/http.md` + `spec/05-coding/errors.md` |
+| 写业务用例（`biz/`） | `spec/02-architecture/layering.md` + `spec/05-coding/errors.md` |
 | 写 goroutine / 用锁 / 传 context | `spec/05-coding/concurrency.md` |
 | 写 MySQL 模型 / DAO | `spec/04-data-model/mysql.md` |
 | 写 Redis 缓存 / 分布式锁 | `spec/04-data-model/redis.md` |
@@ -29,8 +29,8 @@ alwaysApply: false
 ## 核心约束（不可违反，无需打开 spec 也要遵守）
 
 ### 架构
-- 单服务：`cmd → web → controlplane → repo → model`，禁止跨层
-- monorepo：`internal/<domain>` 之间禁止直接 import，走 API / 事件 / `internal/shared/`
+- 单服务：`cmd → server → service → biz → data → model`，禁止跨层（`service` 不能直连 `data`）
+- monorepo：`cmd/` 按 service 切、`internal/` 按 Bounded Context 切；跨 BC 走 API / 事件 / `internal/pkg/`
 - 接口在消费方定义，禁止循环依赖
 - 依赖通过构造函数注入
 

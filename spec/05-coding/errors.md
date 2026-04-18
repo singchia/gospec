@@ -11,17 +11,18 @@
 ## 哨兵错误（Sentinel Errors）
 
 ```go
-// ✅ 在 lerrors 包中定义领域错误
-package lerrors
+// ✅ 在 internal/pkg/errs 或各 BC 的 biz 包定义领域错误
+package errs
 
 var (
-    ErrPortConflict = errors.New("port conflict")
-    ErrInvalidUsage = errors.New("invalid usage for command line")
-    ErrNotFound     = errors.New("not found")
+    ErrInvalidInput  = errors.New("invalid input")
+    ErrNotFound      = errors.New("not found")
+    ErrAlreadyExists = errors.New("already exists")
+    ErrUnauthorized  = errors.New("unauthorized")
 )
 
 // ✅ 使用 errors.Is() 判断
-if errors.Is(err, lerrors.ErrInvalidUsage) {
+if errors.Is(err, errs.ErrInvalidInput) {
     return // 正常退出，不记录日志
 }
 ```
@@ -31,18 +32,18 @@ if errors.Is(err, lerrors.ErrInvalidUsage) {
 ```go
 // ✅ fmt.Errorf + %w 保留上下文
 if err != nil {
-    return fmt.Errorf("create edge %q: %w", req.Name, err)
+    return fmt.Errorf("create order %q: %w", req.Name, err)
 }
 
 // ✅ errors.Is() 检查整条错误链
 if errors.Is(err, gorm.ErrRecordNotFound) {
-    return nil, lerrors.ErrNotFound
+    return nil, errs.ErrNotFound
 }
 
 // ✅ errors.As() 提取具体错误类型
 var pqErr *pq.Error
 if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-    return nil, lerrors.ErrAlreadyExists
+    return nil, errs.ErrAlreadyExists
 }
 ```
 
@@ -84,7 +85,7 @@ err != nil
   │    └─ 包装后向上传播，由上层决定如何响应
   ├─ 是意外错误（DB 连接断 / 第三方超时）？
   │    └─ 记录 ERROR 日志（含 trace_id、上下文）+ 包装传播
-  └─ 是正常退出信号（ErrInvalidUsage、context.Canceled）？
+  └─ 是正常退出信号（context.Canceled、业务无错误的早返回）？
        └─ 静默处理，不记录日志
 ```
 
@@ -92,7 +93,7 @@ err != nil
 
 ```go
 // ❌ 业务逻辑禁止 panic
-func CreateEdge(req *Request) (*Edge, error) {
+func CreateOrder(req *Request) (*Order, error) {
     if req == nil {
         panic("nil request")  // 反例
     }
@@ -127,25 +128,25 @@ go func() {
 
 ```go
 // ❌ 反例：错误被记录两遍
-func (s *Service) CreateEdge(...) error {
-    if err := s.dao.Create(edge); err != nil {
-        slog.Error("dao create failed", "err", err)  // 这里记一次
-        return err  // 上层又会记一次
+func (uc *OrderUsecase) CreateOrder(ctx context.Context, in *Input) error {
+    if err := uc.repo.Create(ctx, order); err != nil {
+        slog.Error("data create failed", "err", err)  // 这里记一次
+        return err                                    // 上层又会记一次
     }
 }
 
 // ✅ 要么记录要么传播，二选一
-func (s *Service) CreateEdge(...) error {
-    if err := s.dao.Create(edge); err != nil {
-        return fmt.Errorf("dao create edge: %w", err)
+func (uc *OrderUsecase) CreateOrder(ctx context.Context, in *Input) error {
+    if err := uc.repo.Create(ctx, order); err != nil {
+        return fmt.Errorf("data create order: %w", err)
     }
 }
 
-// 在最外层（HTTP handler 或 main）记录一次
-func (web *web) CreateEdge(ctx context.Context, req *Request) (*Response, error) {
-    resp, err := web.service.CreateEdge(ctx, req)
+// 在最外层（Handler）记录一次
+func (s *OrderService) CreateOrder(ctx context.Context, req *Request) (*Response, error) {
+    resp, err := s.uc.CreateOrder(ctx, toInput(req))
     if err != nil {
-        slog.ErrorContext(ctx, "create edge failed",
+        slog.ErrorContext(ctx, "create order failed",
             slog.String("trace_id", traceIDFromCtx(ctx)),
             slog.Any("err", err),
         )
@@ -160,14 +161,14 @@ func (web *web) CreateEdge(ctx context.Context, req *Request) (*Response, error)
 ## HTTP 错误映射
 
 ```go
-// ✅ 领域错误 → HTTP 错误码
+// ✅ 领域错误 → HTTP 错误码（Kratos 风格；gin / hertz API 不同，职责一致）
 import kratoserrors "github.com/go-kratos/kratos/v2/errors"
 
-if errors.Is(err, lerrors.ErrNotFound) {
-    return nil, kratoserrors.New(404, "EDGE_NOT_FOUND", "edge 不存在")
+if errors.Is(err, errs.ErrNotFound) {
+    return nil, kratoserrors.New(404, "ORDER_NOT_FOUND", "订单不存在")
 }
-if errors.Is(err, lerrors.ErrAlreadyExists) {
-    return nil, kratoserrors.New(409, "EDGE_ALREADY_EXISTS", "edge 已存在")
+if errors.Is(err, errs.ErrAlreadyExists) {
+    return nil, kratoserrors.New(409, "ORDER_ALREADY_EXISTS", "订单已存在")
 }
 return nil, err // 其他透传为 500
 ```

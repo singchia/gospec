@@ -85,8 +85,8 @@
 ```yaml
 - alert: HighHttpErrorRate
   expr: |
-    sum(rate(liaison_http_errors_total[5m]))
-      / sum(rate(liaison_http_requests_total[5m])) > 0.05
+    sum(rate(order_http_errors_total[5m]))
+      / sum(rate(order_http_requests_total[5m])) > 0.05
   for: 5m
   labels:
     severity: P1

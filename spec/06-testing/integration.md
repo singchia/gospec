@@ -9,16 +9,16 @@
 ```go
 //go:build integration
 
-package edge_test
+package order_test
 
-func TestEdge_CreateAndGet(t *testing.T) {
-    dao := setupTestDAO(t) // 连测试 DB
-    svc := NewEdgeService(dao)
+func TestOrder_CreateAndGet(t *testing.T) {
+    repo := setupTestRepo(t)              // 连测试 DB
+    uc := biz.NewOrderUsecase(repo)
 
-    edge, err := svc.CreateEdge(ctx, &v1.CreateEdgeRequest{Name: "test"})
+    order, err := uc.CreateOrder(ctx, &biz.CreateOrderInput{Name: "test"})
     require.NoError(t, err)
 
-    got, err := svc.GetEdge(ctx, edge.ID)
+    got, err := uc.GetOrder(ctx, order.ID)
     require.NoError(t, err)
     assert.Equal(t, "test", got.Name)
 }
@@ -103,19 +103,19 @@ E2E 测试连真实部署的服务，验证完整业务流程。
 
 package e2e
 
-func TestEdgeLifecycle(t *testing.T) {
+func TestOrderLifecycle(t *testing.T) {
     client := newAPIClient(t, os.Getenv("E2E_BASE_URL"))
 
     // 1. 登录
     token := client.Login("test@example.com", "password")
 
-    // 2. 创建 edge
-    edge := client.CreateEdge(token, "test-edge")
-    t.Cleanup(func() { client.DeleteEdge(token, edge.ID) })
+    // 2. 创建订单
+    order := client.CreateOrder(token, "test-order")
+    t.Cleanup(func() { client.DeleteOrder(token, order.ID) })
 
-    // 3. 获取 edge
-    got := client.GetEdge(token, edge.ID)
-    assert.Equal(t, "test-edge", got.Name)
+    // 3. 获取订单
+    got := client.GetOrder(token, order.ID)
+    assert.Equal(t, "test-order", got.Name)
 
     // 4. 删除（cleanup 自动执行）
 }
