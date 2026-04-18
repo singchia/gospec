@@ -91,15 +91,13 @@ enum OrderStatus {
 protoc --go_out=. --go-grpc_out=. --go-http_out=. api/order/v1/order.proto
 ```
 
-通过 Makefile 统一封装：
+生成步骤必须封装为 Makefile `proto` target，统一本地和 CI 的入口（详见 `08-delivery/makefile.md`）：
 
-```makefile
-.PHONY: proto
-proto:
-	protoc --proto_path=. \
-	       --go_out=. --go-grpc_out=. --go-http_out=. \
-	       api/*/v1/*.proto
+```bash
+make proto
 ```
+
+**禁止**在 CI / README / 新人文档里直接写 `protoc ...` 命令——一定走 `make proto`。
 
 **禁止：**
 - ❌ 手工修改生成的 `.pb.go` 文件

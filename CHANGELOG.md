@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-04-18
+
+### Added
+
+- **新 spec：`spec/08-delivery/makefile.md`** — 把"所有构建 / 产物 / 部署目标必须由根 Makefile 作为唯一入口"写成红线。覆盖：必备 target 矩阵（`help` / `tools` / `proto` / `build[-%]` / `image[-%]` / `test-*` / `lint` / `migrate-*` / `deploy-<env>` / `clean` / `release`）、命名规范、自文档 `help`、版本 / commit / build-time 注入、per-service 模板（`cmd/*` 自动识别）、shell 严格模式、macOS / Linux 兼容、工具版本锁定、生产部署审批保护、最小可用模板、反模式、自查清单。
+- **核心约束新增"构建 / 交付"段**（`spec/spec.md` / `08-delivery/README.md` / `docs/templates/project-agents-template.md` / `docs/templates/cursor-rule-template.mdc` 四处同步）：CI / README / 本地开发统一调 `make <target>`，禁止直接 `go build` / `docker build` / `kubectl apply`；版本号 / 镜像 tag 变量注入；生产部署 target 必须有审批保护。
+- **路由表条目**：`spec/spec.md` 和 `spec/08-delivery/README.md` 加"写 / 改 Makefile"路由。
+
+### Changed
+
+- **`spec/02-architecture/monorepo.md`**：原"Makefile 统一入口"小节由具体片段改为引用 `makefile.md`，避免两处维护；"加新服务流程"说明如果用了 `build-%` 模板 Makefile 会自动识别。
+- **`spec/03-api/proto.md`**：proto 生成步骤的 makefile 片段收敛为"调 `make proto`"，禁止 CI / README 里直接写 `protoc ...` 命令。
+- **`spec/08-delivery/cicd.md`**：CI 示例全部改为 `make tools` / `make lint` / `make vet` / `make build` / `make cover` / `make vuln`，无直接 `go build` / `go test` / `govulncheck`；自查清单加"CI step 只调 make"一条。
+- **`spec/08-delivery/release.md`**：多平台构建改为 `make build-cross`，镜像 / 推送 / 签名改为 `make image` / `make image-push` / `make image-sign`，CI YAML 里不再有 `go build` / `docker buildx` / `cosign sign` 直接命令。
+
 ## [0.3.0] - 2026-04-18
 
 ### Changed (BREAKING — 去特化 / 去框架锁定)

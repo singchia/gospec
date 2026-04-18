@@ -408,27 +408,7 @@ golangci-lint 1.60.3
 
 ### Makefile 统一入口
 
-```makefile
-.PHONY: build test lint proto migrate help
-
-build:
-	go build ./cmd/...
-
-test:
-	go test ./... -race -timeout 120s
-
-lint:
-	golangci-lint run ./...
-
-proto:
-	./scripts/proto-gen.sh
-
-migrate:
-	migrate -path db/migrations -database "$$DSN" up
-
-help:
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
-```
+所有构建 / 产物 / 部署目标必须由根 Makefile 作为**唯一入口**，CI / README / 本地开发统一调 `make <target>`。完整规范 + 最小模板见 [`08-delivery/makefile.md`](../08-delivery/makefile.md)。
 
 新人 `git clone` + `make help` 即可上手。
 
@@ -483,9 +463,8 @@ GOPRIVATE=github.com/your-org/*
 2. 更新 deploy/：
    deploy/helm/<bc>-<role>/
 
-3. 更新 Makefile：
-   build-<bc>-<role>:
-       go build -o bin/<bc>-<role> ./cmd/<bc>-<role>
+3. 更新 Makefile：如果用了 `build-%` 模板（见 `08-delivery/makefile.md`），
+   Makefile 会自动识别 `cmd/<bc>-<role>/`，无需改动；否则手动加 `build-<bc>-<role>` target
 
 4. 走"新服务上线 Checklist"（high-level-design.md）
 ```

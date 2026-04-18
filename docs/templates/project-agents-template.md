@@ -70,6 +70,12 @@
 - 禁止提交敏感信息（密码、密钥、token）
 - 禁止 force push main/master
 
+### 构建 / 交付
+- **所有构建 / 产物 / 部署目标必须由根 Makefile 作为唯一入口**
+- CI / README / Dockerfile 外层 / 本地开发统一调 `make <target>`，禁止直接 `go build` / `docker build` / `kubectl apply`
+- 版本号 / 镜像 tag 用变量注入，禁止硬编码
+- 生产部署 target 必须有审批保护
+
 ### 可观测性
 - 所有对外服务必须暴露 `/healthz`、`/readyz`、`/metrics`
 - 日志结构化（slog / zap）+ `trace_id`，ERROR 包含完整 error chain

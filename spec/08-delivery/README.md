@@ -7,6 +7,7 @@
 | 当前任务 | 读这个 |
 |---------|--------|
 | 写 commit、起分支、走开发工作流、本地跑起来 | `git.md` |
+| 写 / 改 Makefile、加构建 / 镜像 / 部署 target | `makefile.md` |
 | 配 CI pipeline、golangci-lint、pre-commit、覆盖率门禁、分支保护 | `cicd.md` |
 | 发版 / 多平台构建 / 镜像签名 / SBOM / 生产部署审批 | `release.md` |
 
@@ -25,3 +26,4 @@
 - main 分支必须启用 branch protection
 - CI 必须启用 `-race`
 - 安全扫描（govulncheck、gitleaks、trivy）必须在 CI 阻断 HIGH/CRITICAL（详见 `11-security/secrets-supply-chain.md`）
+- **所有构建 / 产物 / 部署目标必须由根 Makefile 作为唯一入口**：CI / README / 本地开发统一调 `make <target>`，禁止直接 `go build` / `docker build` / `kubectl apply`（详见 `makefile.md`）

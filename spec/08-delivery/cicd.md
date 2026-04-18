@@ -1,6 +1,8 @@
 # 08.2 - CI/CD Pipeline、Lint、Branch Protection
 
 > 适用：配置 GitHub Actions、配 golangci-lint、配 pre-commit、配 main 分支保护规则。
+>
+> **前置**：CI step 只调 `make <target>`，禁止直接跑 `go build` / `docker build` / `kubectl`。完整 Makefile 规范见 `makefile.md`。
 
 ## Pipeline 阶段全景
 
@@ -40,24 +42,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: true
-      - uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.60.3
+        with: { go-version: '1.24', cache: true }
+      - run: make tools
+      - run: make lint
 
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: true
-      - run: go build ./...
-      - run: go vet ./...
-      - run: go test ./... -race -timeout 120s -coverprofile=coverage.out
+        with: { go-version: '1.24', cache: true }
+      - run: make tools
+      - run: make vet
+      - run: make build
+      - run: make cover
       - name: Coverage gate
         run: |
           pct=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | tr -d '%')
@@ -69,12 +67,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-      - name: govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+        with: { go-version: '1.24' }
+      - run: make tools
+      - run: make vuln          # 调 govulncheck
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
       - name: Trivy filesystem
@@ -85,6 +80,8 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 ```
+
+> `make vuln` / `make cover` / `make tools` 等 target 的定义见 `makefile.md`。CI 里所有可重复的构建 / 测试 / 扫描步骤都应在 Makefile 中实现，CI YAML 只做参数传递和编排。
 
 ## golangci-lint 配置
 
@@ -187,6 +184,7 @@ main 分支必须启用：
 
 ## 自查
 
+- [ ] CI 所有 step 只调 `make <target>`，无直接 `go build` / `docker build` / `kubectl`
 - [ ] CI 包含 lint / build / test(-race) / 覆盖率门禁
 - [ ] CI 包含 govulncheck / gitleaks / trivy
 - [ ] golangci-lint 启用核心 linter

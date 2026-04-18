@@ -1,6 +1,6 @@
 {
   "name": "gospec",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Go backend SDLC spec skill for AI coding agents (Chinese content), framework-neutral. Covers 13 stages from requirements to operations: Bounded-Context-based monorepo, Kratos-style layering (cmd/server/service/biz/data/model), API design, data models (MySQL / Redis / ClickHouse / InfluxDB), coding patterns, testing, code review, CI/CD, observability, security, operations, and database migration. Web framework agnostic — Kratos / gin / Hertz / chi / echo all supported. Progressive-disclosure design — the agent reads a routing table and loads only the 1-3 files relevant to the current task. | Go 后端 SDLC 全流程规范 Skill（中文正文），框架中性。覆盖 Bounded Context 切分的 monorepo、Kratos 风格分层（cmd/server/service/biz/data/model）、API、数据模型（MySQL/Redis/ClickHouse/InfluxDB）、编码、测试、代码审查、交付、文档、可观测性、安全、运维与事故响应、数据库迁移 13 个阶段。Web 框架可替换（Kratos/gin/Hertz/chi/echo）。按渐进式披露设计，Agent 按任务路由表按需加载规范子文件。",
   "author": "singchia",
   "license": "MIT",

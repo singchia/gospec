@@ -16,14 +16,23 @@
 
 ## 多平台构建
 
-```bash
-# 本地手动构建
-GOOS=linux  GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/app-linux-amd64  cmd/manager/main.go
-GOOS=linux  GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/app-linux-arm64  cmd/manager/main.go
-GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/app-darwin-arm64 cmd/manager/main.go
+多平台构建必须封装为 Makefile target（`build-cross`），详见 `makefile.md`。示例：
+
+```makefile
+build-cross: ## 多平台构建（发版用）
+	@for os in linux darwin; do \
+	  for arch in amd64 arm64; do \
+	    for svc in $(SERVICES); do \
+	      GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags="$(LDFLAGS)" \
+	        -o dist/$$svc-$$os-$$arch ./cmd/$$svc; \
+	    done; \
+	  done; \
+	done
 ```
 
 `-trimpath` 去除编译路径，`-s -w` 去除调试信息和符号表，减小体积。
+
+**红线**：CI / 本地都调 `make build-cross`，不在 CI YAML 里重写 `go build` 命令。
 
 ## 发布流水线
 
@@ -38,16 +47,12 @@ GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/app-darwin-a
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
+        with: { go-version: '1.24', cache: true }
 
-      - name: Build multi-platform
-        run: |
-          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/app-linux-amd64 ./cmd/manager
-          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/app-linux-arm64 ./cmd/manager
-
-      - name: Build & push image
-        run: |
-          docker buildx build --platform linux/amd64,linux/arm64 \
-            -t $REGISTRY/$IMAGE:${GITHUB_REF_NAME} --push .
+      - run: make tools
+      - run: make build-cross                    # 多平台二进制
+      - run: make image IMAGE_TAG=${GITHUB_REF_NAME}
+      - run: make image-push IMAGE_TAG=${GITHUB_REF_NAME}
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
@@ -62,15 +67,15 @@ GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o bin/app-darwin-a
           severity: HIGH,CRITICAL
           exit-code: 1
 
-      - name: Sign image (keyless)
-        run: |
-          cosign sign --yes $REGISTRY/$IMAGE:${GITHUB_REF_NAME}
+      - run: make image-sign IMAGE_TAG=${GITHUB_REF_NAME}
 
       - name: Release notes
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
 ```
+
+> 所有构建 / 推送 / 签名步骤都走 Makefile target（`build-cross` / `image` / `image-push` / `image-sign`）。CI YAML 不含任何 `go build` / `docker buildx` / `cosign sign` 的直接命令。详见 `makefile.md`。
 
 容器最佳实践 / Dockerfile 模板见 `11-security/secrets-supply-chain.md`。
 

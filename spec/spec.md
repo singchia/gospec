@@ -69,6 +69,7 @@
 | 当前任务 | 必读 |
 |---------|------|
 | Git commit / 分支命名 / 工作流 / 本地起服务 | `08-delivery/git.md` |
+| 写 / 改 Makefile、加构建 / 镜像 / 部署 target | `08-delivery/makefile.md` |
 | 配置 CI/CD pipeline / golangci-lint / pre-commit / 分支保护 | `08-delivery/cicd.md` |
 | 发版 / 多平台构建 / 镜像签名 / 生产审批 | `08-delivery/release.md` |
 | 部署 / 回滚 / feature flag | `12-operations/deployment.md` |
@@ -131,6 +132,7 @@ spec/
 ├── 08-delivery/                  # 交付
 │   ├── README.md
 │   ├── git.md                    # commit / branch / workflow
+│   ├── makefile.md               # 构建 / 镜像 / 部署的唯一入口
 │   ├── cicd.md                   # pipeline / lint / pre-commit
 │   └── release.md                # 多平台 / 签名 / 生产审批
 ├── 09-documentation.md           # 文档结构 / 模板
@@ -231,6 +233,12 @@ spec/
 - 提交格式：`<type>(<scope>): <desc>`
 - 禁止提交敏感信息（密码、密钥、token）
 - 禁止 force push main/master
+
+### 构建 / 交付
+- 所有构建 / 产物 / 部署目标必须由根 Makefile 作为**唯一入口**
+- CI / README / Dockerfile 外层 / 本地开发统一调 `make <target>`，禁止直接 `go build` / `docker build` / `kubectl apply`
+- 版本号 / 镜像 tag 通过变量注入，禁止硬编码
+- 生产部署 target 必须有审批保护（`DEPLOY_APPROVED=yes` 或 GitHub Environments 审批）
 
 ### 可观测性
 - 所有对外服务必须暴露 `/healthz`、`/readyz`、`/metrics`

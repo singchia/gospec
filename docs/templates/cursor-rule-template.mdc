@@ -58,6 +58,11 @@ alwaysApply: false
 - 禁止提交敏感信息
 - 禁止 force push main/master
 
+### 构建 / 交付
+- **所有构建 / 产物 / 部署目标必须走根 Makefile**（`make build` / `make image` / `make deploy-*`）
+- CI / README / 本地开发统一调 `make <target>`，禁止直接 `go build` / `docker build` / `kubectl`
+- 生产部署 target 有审批保护
+
 ### 可观测性
 - 暴露 `/healthz` `/readyz` `/metrics`
 - 日志结构化 + `trace_id`
