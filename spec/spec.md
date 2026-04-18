@@ -188,10 +188,13 @@ spec/
 - 每个目录都被 CODEOWNERS 覆盖
 
 ### 编码
-- 禁止 `_ = fn()` 忽略错误
+- 禁止 `_ = fn()` 忽略错误（确实想丢弃错误必须有注释说明）
 - 共享状态必须加锁，测试必须带 `-race`
 - 错误不重复记录：要么处理，要么向上传播
 - 所有涉及 IO 的函数第一个参数为 `context.Context`
+- `init()` 仅允许做注册（pprof / metrics collector / driver 等），禁止做 IO 或可能 panic 的逻辑
+- 避免 `any` / `interface{}` 出现在公共 API 边界（解码、SDK 适配等不可避免场景除外）
+- `utils/` 仅作最后兜底，优先按职责拆 `mathx/`、`strx/` 等
 
 ### API
 - 所有 API 变更先更新 `.proto`，不直接修改生成代码

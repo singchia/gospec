@@ -1,0 +1,89 @@
+---
+description: gospec — Go 后端 SDLC 规范，编写/审查 Go / proto / migration / Dockerfile 时自动加载
+globs: ["**/*.go", "**/*.proto", "go.mod", "go.sum", "**/Dockerfile", "**/*.sql", "docs/rfc/**/*.md", "docs/adr/**/*.md", "docs/requirements/**/*.md"]
+alwaysApply: false
+---
+
+# gospec —— Go 后端 SDLC 规范（Cursor 单文件入口）
+
+> 本文件由 [gospec](https://github.com/singchia/gospec) 自动生成，作为 **Cursor 的唯一入口**。
+> 完整规范在 `~/.claude/skills/gospec/spec/` 或 `.claude/skills/gospec/spec/`。
+> Cursor 已通过 `globs` 自动附加，无需用户每次选择。
+
+## 任务路由（先看这个表，再决定要不要展开 spec/）
+
+| 任务 | 最少必读 |
+|------|---------|
+| 写 HTTP / gRPC handler | `spec/03-api/proto.md` + `spec/03-api/http.md` + `spec/05-coding/errors.md` |
+| 写业务逻辑 / Service | `spec/02-architecture/layering.md` + `spec/05-coding/errors.md` |
+| 写 goroutine / 用锁 / 传 context | `spec/05-coding/concurrency.md` |
+| 写 MySQL 模型 / DAO | `spec/04-data-model/mysql.md` |
+| 写 Redis 缓存 / 分布式锁 | `spec/04-data-model/redis.md` |
+| 写测试 | `spec/06-testing/unit.md` |
+| 写 migration | `spec/13-database-migration/migration.md` |
+| 加日志 / 指标 / 追踪 | `spec/10-observability/{logging,metrics,tracing}.md` |
+| 实现登录 / 鉴权 | `spec/11-security/auth.md` |
+| 写 PRD / RFC / ADR / HLD | `docs/templates/` 对应模板 |
+| PR 自查 | `spec/07-code-review.md` |
+
+## 核心约束（不可违反，无需打开 spec 也要遵守）
+
+### 架构
+- 单服务：`cmd → web → controlplane → repo → model`，禁止跨层
+- monorepo：`internal/<domain>` 之间禁止直接 import，走 API / 事件 / `internal/shared/`
+- 接口在消费方定义，禁止循环依赖
+- 依赖通过构造函数注入
+
+### 编码
+- 禁止 `_ = fn()` 忽略错误
+- 共享状态必须加锁，测试必须 `-race`
+- 错误用 `%w` 包装；不重复记录
+- 涉及 IO 的函数第一个参数 `context.Context`
+- `init()` 仅做注册（pprof / collector / driver），禁止 IO 或可能 panic
+- 避免 `any` / `interface{}` 出现在公共 API 边界
+
+### API
+- 所有变更先改 `.proto`，禁止改生成代码
+- Handler 必须有 Swagger 注释（`@Summary` / `@Router` / `@Success`）
+- 响应统一 `{code, message, data}`
+- 破坏性变更走新版本
+
+### 测试
+- 新功能必须有单元测试
+- CI 强制 `-race`
+- E2E 必须清理数据
+
+### Git
+- 提交格式：`<type>(<scope>): <desc>`
+- 禁止提交敏感信息
+- 禁止 force push main/master
+
+### 可观测性
+- 暴露 `/healthz` `/readyz` `/metrics`
+- 日志结构化 + `trace_id`
+- 高基数字段（user_id / email / url）禁止做 Prometheus label
+- 敏感字段禁止明文入日志
+
+### 安全
+- 密码 bcrypt / argon2id，禁止 MD5 / SHA1
+- SQL 全部参数化
+- 密钥禁止进代码 / 镜像 / 日志
+- 容器以非 root 运行
+- 多租户接口强制 `tenant_id` 过滤
+
+### 运维
+- 任何变更必须有回滚方案
+- 告警必须配 Runbook 链接
+- 高风险变更走金丝雀 / feature flag
+- P0 / P1 事故必须产 blameless postmortem
+
+### 数据存储
+- **MySQL**：schema 变更走 migration；大表用在线 DDL；变更兼容滚动发布
+- **Redis**：所有 key 必须 TTL；禁止大 key（value > 10KB / 集合 > 5000）；分布式锁有 owner 校验
+- **ClickHouse**：必须 Replicated；写入批量；ORDER BY 低基数到高基数
+- **InfluxDB**：tag 低基数；bucket 必须 retention
+- PII 字段加密存储
+
+## 输出语言
+
+默认中文（代码注释 / 文档 / commit message）。
