@@ -1,6 +1,6 @@
 {
   "name": "gospec",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Go backend SDLC spec skill for AI coding agents (Chinese content). Covers 13 stages from requirements to operations: architecture, API design, data models (MySQL / Redis / ClickHouse / InfluxDB), coding patterns, testing, code review, CI/CD, observability, security, operations, and database migration. Progressive-disclosure design — the agent reads a routing table and loads only the 1-3 files relevant to the current task. | Go 后端项目 SDLC 全流程规范 Skill（中文正文）。覆盖需求、架构、API、数据模型（MySQL/Redis/ClickHouse/InfluxDB）、编码、测试、代码审查、交付、文档、可观测性、安全、运维与事故响应、数据库迁移 13 个阶段。按渐进式披露设计，Agent 按任务路由表按需加载规范子文件。",
   "author": "singchia",
   "license": "MIT",
