@@ -7,6 +7,7 @@ validate-skill.py — 校验 gospec skill 的结构和 SKILL.md frontmatter。
 用法：
     python3 scripts/validate-skill.py              # 校验当前目录
     python3 scripts/validate-skill.py /path/to/dir # 校验指定目录
+    python3 scripts/validate-skill.py --strict .   # 自查清单缺失视为失败
 
 退出码：0 = 通过，1 = 失败。
 """
@@ -43,8 +44,32 @@ GOSPEC_REQUIRED_FILES = [
     "docs/templates/technical-rfc-template.md",
     "docs/templates/architecture-decision-record-template.md",
     "docs/templates/high-level-design-template.md",
+    "docs/templates/cursor-rule-template.mdc",
     "scripts/install.sh",
 ]
+
+# 路由表里的 spec 子文件必须真实存在
+ROUTING_LINK_RE = re.compile(r"`(\d{2}-[\w-]+/[\w.-]+\.md|\d{2}-[\w-]+\.md|spec\.md)`")
+
+# 每个 spec 子文件应有"自查"小节（标题），否则 agent 完成任务后无法对照。
+# 仓库现行约定是 `## 自查`（最常用）；保留 `## 自查清单` / `## Checklist` 兼容。
+# 例外：纯路由 / 索引文件
+SELF_CHECK_PATTERN = re.compile(r"^##\s+(自查清单|自查|Checklist|checklist|Self-check)\b", re.MULTILINE)
+SELF_CHECK_EXEMPT = {
+    "spec/spec.md",                     # 入口路由
+    "spec/07-code-review.md",           # 整个文件就是 PR 自查清单
+    "spec/05-coding/README.md",         # 二级路由
+    "spec/01-requirement/README.md",
+    "spec/02-architecture/README.md",
+    "spec/03-api/README.md",
+    "spec/04-data-model/README.md",
+    "spec/06-testing/README.md",
+    "spec/08-delivery/README.md",
+    "spec/10-observability/README.md",
+    "spec/11-security/README.md",
+    "spec/12-operations/README.md",
+    "spec/13-database-migration/README.md",
+}
 
 
 def validate_frontmatter(skill_md: Path) -> tuple[bool, str]:
@@ -110,30 +135,86 @@ def validate_files(skill_dir: Path) -> tuple[bool, str]:
     return True, ""
 
 
-def validate(skill_dir: str) -> tuple[bool, str]:
+def validate_routing_links(skill_dir: Path) -> tuple[bool, str]:
+    """spec/spec.md 路由表里引用的所有 spec 子文件必须存在。"""
+    spec_md = skill_dir / "spec" / "spec.md"
+    text = spec_md.read_text()
+    spec_root = skill_dir / "spec"
+    broken = []
+    for match in ROUTING_LINK_RE.findall(text):
+        # 跳过 spec.md 自引用
+        if match == "spec.md":
+            continue
+        target = spec_root / match
+        if not target.exists():
+            broken.append(match)
+    if broken:
+        unique = sorted(set(broken))
+        return False, "spec/spec.md 路由表引用了不存在的文件:\n   " + "\n   ".join(unique)
+    return True, ""
+
+
+def validate_self_check(skill_dir: Path) -> tuple[bool, str]:
+    """每个 spec/*.md 子文件（非索引）应有 `## 自查` / `## Checklist` 等标题小节。"""
+    spec_root = skill_dir / "spec"
+    missing = []
+    for md in spec_root.rglob("*.md"):
+        rel = md.relative_to(skill_dir).as_posix()
+        if rel in SELF_CHECK_EXEMPT:
+            continue
+        body = md.read_text()
+        if not SELF_CHECK_PATTERN.search(body):
+            missing.append(rel)
+    if missing:
+        return False, "以下 spec 子文件缺少 `## 自查` / `## Checklist` 标题小节:\n   " + "\n   ".join(sorted(missing))
+    return True, ""
+
+
+def validate(skill_dir: str, strict: bool = False) -> tuple[bool, str, list[str]]:
+    """返回 (ok, summary_msg, warnings)。warnings 只在非 strict 模式下不阻塞。"""
     skill_dir = Path(skill_dir).resolve()
+    warnings: list[str] = []
 
     if not skill_dir.is_dir():
-        return False, f"目录不存在: {skill_dir}"
+        return False, f"目录不存在: {skill_dir}", warnings
 
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
-        return False, f"SKILL.md 不存在: {skill_md}"
+        return False, f"SKILL.md 不存在: {skill_md}", warnings
 
     ok, msg = validate_frontmatter(skill_md)
     if not ok:
-        return False, msg
+        return False, msg, warnings
     name = msg
 
     ok, msg = validate_files(skill_dir)
     if not ok:
-        return False, msg
+        return False, msg, warnings
 
-    return True, f"skill '{name}' 通过校验（frontmatter + {len(GOSPEC_REQUIRED_FILES)} 个必备文件）"
+    ok, msg = validate_routing_links(skill_dir)
+    if not ok:
+        return False, msg, warnings
+
+    ok, msg = validate_self_check(skill_dir)
+    if not ok:
+        if strict:
+            return False, msg, warnings
+        warnings.append(msg)
+
+    return True, (
+        f"skill '{name}' 通过校验"
+        f"（frontmatter + {len(GOSPEC_REQUIRED_FILES)} 必备文件 + 路由表完整性"
+        f"{' + 自查清单' if not warnings else ''}）"
+    ), warnings
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "."
-    ok, msg = validate(target)
+    args = sys.argv[1:]
+    strict = "--strict" in args
+    args = [a for a in args if a != "--strict"]
+    target = args[0] if args else "."
+    ok, msg, warnings = validate(target, strict=strict)
+    for w in warnings:
+        print("⚠️  " + w)
     print(("✅ " if ok else "❌ ") + msg)
     sys.exit(0 if ok else 1)

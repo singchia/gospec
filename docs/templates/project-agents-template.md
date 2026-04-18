@@ -46,13 +46,13 @@
 - 每个目录都被 CODEOWNERS 覆盖
 
 ### 编码
-- 禁止 `_ = fn()` 忽略错误
+- 禁止 `_ = fn()` 忽略错误（确实想丢弃必须注释说明）
 - 共享状态必须加锁，测试必须带 `-race`
 - 错误用 `%w` 包装；不重复记录（要么处理要么传播）
 - 所有涉及 IO 的函数第一个参数为 `context.Context`
-- 禁止 `init()` 函数（除 pprof 注册等特殊场景）
-- 禁止全局可变变量
-- 禁止裸 `interface{}`
+- `init()` 仅允许做注册（pprof / metrics collector / driver），禁止做 IO 或可能 panic
+- 禁止全局可变变量（只读单例 / collector 除外）
+- 避免 `any` / `interface{}` 出现在公共 API 边界（解码 / SDK 适配等不可避免时就近注释）
 
 ### API
 - 所有 API 变更先更新 `.proto`，禁止改生成代码

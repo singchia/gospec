@@ -162,6 +162,26 @@ spec/
 
 ---
 
+## 项目阶段裁剪（按团队 / 流量规模可跳过）
+
+不是所有规则在所有阶段都强制。Agent 评估是否提议某项规则前，先看团队规模：
+
+| 规则 | < 5 人 / MVP | 5-20 人 / 成长期 | > 20 人 / 成熟期 |
+|------|-------------|-----------------|----------------|
+| ADR / RFC / PRD 全套 | issue 即可 | RFC + 简化 PRD | 全套 |
+| 完整 Postmortem 模板 | 简短复盘 | 完整 | 完整 + 季度回顾 |
+| 多服务 monorepo + CODEOWNERS | 单仓库 | 按需 | 强制 |
+| feature flag / 金丝雀 | 直接发布 | 高风险变更走 | 强制 |
+| ClickHouse / InfluxDB | 暂不引入 | 按需 | 按需 |
+| OpenTelemetry tracing | logging 优先 | 加 trace | 全链路 trace |
+| SLO 文档 + burn rate 告警 | 简单可用率告警 | 定 SLO | 多窗口 burn rate |
+| 威胁建模 | 安全 checklist | 关键模块做 STRIDE | 全模块 |
+| 变更评审 + on-call rotation | PR review 即可 | 引入 on-call | 24/7 on-call |
+
+**核心约束（下方"核心约束"小节）任何阶段都要遵守**——这些是红线，不随规模放宽。
+
+---
+
 ## Agent 行为约定
 
 1. **开始任何任务前**：查上面的路由表，确定本次需要读哪些文件
@@ -188,10 +208,13 @@ spec/
 - 每个目录都被 CODEOWNERS 覆盖
 
 ### 编码
-- 禁止 `_ = fn()` 忽略错误
+- 禁止 `_ = fn()` 忽略错误（确实想丢弃错误必须有注释说明）
 - 共享状态必须加锁，测试必须带 `-race`
 - 错误不重复记录：要么处理，要么向上传播
 - 所有涉及 IO 的函数第一个参数为 `context.Context`
+- `init()` 仅允许做注册（pprof / metrics collector / driver 等），禁止做 IO 或可能 panic 的逻辑
+- 避免 `any` / `interface{}` 出现在公共 API 边界（解码、SDK 适配等不可避免场景除外）
+- `utils/` 仅作最后兜底，优先按职责拆 `mathx/`、`strx/` 等
 
 ### API
 - 所有 API 变更先更新 `.proto`，不直接修改生成代码
