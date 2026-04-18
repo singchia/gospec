@@ -17,10 +17,21 @@ jobs:
       - name: Install pyyaml
         run: pip install pyyaml
 
-      - name: Validate SKILL.md frontmatter + required files
-        run: python3 scripts/validate-skill.py .
+      - name: Validate SKILL.md + routing + self-check (strict)
+        run: python3 scripts/validate-skill.py --strict .
 
       - name: Smoke test build
         run: |
           python3 scripts/build-skill.py /tmp/dist
           test -f /tmp/dist/gospec.skill
+
+      - name: Smoke test install.sh in clean dir
+        run: |
+          mkdir -p /tmp/install-test
+          cd /tmp/install-test
+          SKILL_DIR=$GITHUB_WORKSPACE bash $GITHUB_WORKSPACE/scripts/install.sh
+          test -f AGENTS.md
+          test -f .cursor/rules/gospec.mdc
+          # 校验 cursor 规则的 frontmatter（globs / alwaysApply）
+          head -5 .cursor/rules/gospec.mdc | grep -q "^globs:"
+          head -5 .cursor/rules/gospec.mdc | grep -q "^alwaysApply:"

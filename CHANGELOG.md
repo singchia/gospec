@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **SKILL.md `description` 大幅缩短**（~1024 字符 → ~250 字符），提升 agent 激活匹配准确率。
+- **软化 3 条过严的"强制约束"**，与 Go 生态实际一致：
+  - `init()` 改为"仅允许做注册（pprof / collector / driver），禁止 IO 或可能 panic"
+  - `interface{}` 改为"避免出现在公共 API 边界，解码 / SDK 适配等不可避免场景就近注释"
+  - `utils/` 改为"仅作最后兜底，优先按职责拆 `mathx/` / `strx/`"
+- 三处同步更新：`spec/spec.md` / `spec/05-coding/README.md` / `docs/templates/project-agents-template.md`。
+- **CI 切到 `--strict` 模式**，路由表完整性 + 自查清单缺失视为失败，防 spec 漂移。
+
+### Added (Cursor 体验)
+
+- **`docs/templates/cursor-rule-template.mdc`**：Cursor 单文件规则模板，自带 `globs: [**/*.go, **/*.proto, ...]` + `alwaysApply: false`，让 Cursor 在编辑相关文件时自动附加，**避免每次让用户手动选择规则**。
+- **`scripts/install.sh` 同时落 `.cursor/rules/gospec.mdc`**，可通过 `NO_CURSOR=1` 跳过；本地落后远端时自动提示更新命令。
+
+### Added (校验强化)
+
+- **路由表完整性校验**：`scripts/validate-skill.py` 检查 `spec/spec.md` 路由表里引用的所有 spec 子文件是否真实存在，防 broken link。
+- **自查清单存在校验**：每个 spec 子文件须有 `## 自查` / `## Checklist` 标题小节，否则在 `--strict` 模式下报错。已为缺失的两个文件补上（`spec/09-documentation.md`、`spec/01-requirement/lifecycle.md`）；`spec/07-code-review.md` 整体即为 PR 自查清单，列入例外。
+- **install.sh 端到端冒烟测试**：CI 模拟在干净目录运行 install.sh，校验 `AGENTS.md` 和 `.cursor/rules/gospec.mdc` 落盘 + frontmatter 正确。
+
 ### Added
 
 - **SDLC spec 骨架**（`spec/`）：覆盖从需求到运维的 13 个阶段，每阶段按主题拆分为子文件，通过 `spec/spec.md` 的任务路由表按需加载。

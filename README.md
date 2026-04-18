@@ -169,21 +169,24 @@ npx skills add singchia/gospec -g     # 安装到 ~/.claude/skills/gospec/
 
 之后 Claude Code 等支持 SKILL.md 的 agent 会在你写 / 审查 / 重构 Go 代码时自动激活 gospec，并在首次激活时主动询问是否在项目根创建 `AGENTS.md`。
 
-### 方式二：`install.sh`（一行命令，自动落 AGENTS.md）
+### 方式二：`install.sh`（一行命令，自动落 AGENTS.md + Cursor 规则）
 
-如果你想立刻把 `AGENTS.md` 落到项目根（不等 agent 提示），或者你的 agent 不读 SKILL.md 必须靠 AGENTS.md 触发：
+如果你想立刻把规则落到项目根（不等 agent 提示），或者你的 agent 不读 SKILL.md 必须靠 AGENTS.md / Cursor rules 触发：
 
 ```bash
 cd your-go-project
 bash <(curl -sSL https://raw.githubusercontent.com/singchia/gospec/main/scripts/install.sh)
 ```
 
-这一行会做两件事：
+这一行会做三件事：
 
 1. **安装 gospec skill** 到 `~/.claude/skills/gospec/`（如果还没装）
-2. **在当前目录创建 `AGENTS.md`**，让任何 AI agent 打开本项目就知道遵循 gospec
+2. **在项目根创建 `AGENTS.md`**（Codex / Cline / 通用 agent 入口）
+3. **在项目根创建 `.cursor/rules/gospec.mdc`**（Cursor 单文件规则，自带 `globs`，编辑 `.go` / `.proto` / `Dockerfile` / migration 时自动附加，**避免 Cursor 每次让用户手动选择**）
 
-之后任何 agent（Claude Code、Cursor、Cline、Codex、Gemini CLI、GitHub Copilot）打开你的项目，第一眼看到 `AGENTS.md` 就被引导到 gospec 的任务路由表 + 核心约束。
+跳过 Cursor 落盘：`NO_CURSOR=1 bash <(curl ...)`
+
+之后任何 agent（Claude Code / Cursor / Cline / Codex / Gemini CLI / GitHub Copilot）打开你的项目，都会自动加载 gospec 的任务路由表 + 核心约束。
 
 > **AGENTS.md vs SKILL.md 的区别**：
 > - `SKILL.md` 是 Claude Code 通过 [skills.sh](https://skills.sh) 协议自动加载的入口，作用域是整个 skill

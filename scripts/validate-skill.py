@@ -51,12 +51,14 @@ GOSPEC_REQUIRED_FILES = [
 # 路由表里的 spec 子文件必须真实存在
 ROUTING_LINK_RE = re.compile(r"`(\d{2}-[\w-]+/[\w.-]+\.md|\d{2}-[\w-]+\.md|spec\.md)`")
 
-# 每个 spec 子文件应有"自查清单"小节，否则 agent 完成任务后无法对照
+# 每个 spec 子文件应有"自查"小节（标题），否则 agent 完成任务后无法对照。
+# 仓库现行约定是 `## 自查`（最常用）；保留 `## 自查清单` / `## Checklist` 兼容。
 # 例外：纯路由 / 索引文件
-SELF_CHECK_HEADERS = ("自查清单", "Checklist", "checklist")
+SELF_CHECK_PATTERN = re.compile(r"^##\s+(自查清单|自查|Checklist|checklist|Self-check)\b", re.MULTILINE)
 SELF_CHECK_EXEMPT = {
-    "spec/spec.md",        # 入口路由
-    "spec/05-coding/README.md",  # 二级路由
+    "spec/spec.md",                     # 入口路由
+    "spec/07-code-review.md",           # 整个文件就是 PR 自查清单
+    "spec/05-coding/README.md",         # 二级路由
     "spec/01-requirement/README.md",
     "spec/02-architecture/README.md",
     "spec/03-api/README.md",
@@ -153,7 +155,7 @@ def validate_routing_links(skill_dir: Path) -> tuple[bool, str]:
 
 
 def validate_self_check(skill_dir: Path) -> tuple[bool, str]:
-    """每个 spec/*.md 子文件（非索引）应有自查清单或对应小节。"""
+    """每个 spec/*.md 子文件（非索引）应有 `## 自查` / `## Checklist` 等标题小节。"""
     spec_root = skill_dir / "spec"
     missing = []
     for md in spec_root.rglob("*.md"):
@@ -161,10 +163,10 @@ def validate_self_check(skill_dir: Path) -> tuple[bool, str]:
         if rel in SELF_CHECK_EXEMPT:
             continue
         body = md.read_text()
-        if not any(h in body for h in SELF_CHECK_HEADERS):
+        if not SELF_CHECK_PATTERN.search(body):
             missing.append(rel)
     if missing:
-        return False, "以下 spec 子文件缺少自查清单 / Checklist 小节:\n   " + "\n   ".join(sorted(missing))
+        return False, "以下 spec 子文件缺少 `## 自查` / `## Checklist` 标题小节:\n   " + "\n   ".join(sorted(missing))
     return True, ""
 
 

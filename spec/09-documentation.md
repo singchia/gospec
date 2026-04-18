@@ -131,9 +131,9 @@ Rules:
 
 ---
 
-## PR 文档检查项
+## 自查
 
-提交 PR 时确认：
+提交 PR 前对照（与 `07-code-review.md` 的"文档"小节互补）：
 
 - [ ] 新功能有对应 PRD 或 issue 关联
 - [ ] 架构变更有 ADR
@@ -141,3 +141,5 @@ Rules:
 - [ ] `README.md` 如有影响已同步更新
 - [ ] `.env.example` 如有新配置项已同步更新
 - [ ] 部署配置如有变更已同步更新
+- [ ] 文档归位（PRD/RFC 在 `docs/requirements/` 或 `docs/rfc/`，ADR 在 `docs/adr/`，不散落）
+- [ ] 文档之间相互引用而非复制（避免 spec 漂移）
